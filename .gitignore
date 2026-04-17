@@ -2,6 +2,7 @@
 .pytest_cache/
 __pycache__/
 .venv/
+.claude/
 target/
 .gocache/
 .gomodcache/
@@ -9,6 +10,7 @@ target/
 .benchmarks/
 dist/
 build/
+.turbo/
 *.pyc
 *.pyo
 *.so

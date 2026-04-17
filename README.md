@@ -66,3 +66,7 @@ Quick benchmark entry points:
 
 - Go: `cd go && go test -bench 'Boundary|Deterministic'`
 - Python: `cd python && python3 bench_batch.py`
+
+## Repo Hygiene
+
+See `WORKTREE_HYGIENE.md` for what should stay out of diffs and how to keep the repo portable.
