@@ -1,0 +1,12 @@
+[package]
+name = "snid-py"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "snid_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["extension-module"] }
+snid-core = { path = "../rust", features = ["data"] }

@@ -1,0 +1,21 @@
+name: Test Go
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - name: Generate conformance vectors
+        working-directory: conformance/cmd/generate_vectors
+        run: go run . --out ../../vectors.json
+      - run: go test ./...

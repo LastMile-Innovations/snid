@@ -1,0 +1,8 @@
+BenchmarkSNIDNewFastParallel-10         1000000000	         1.000 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDStringMatterParallel-10     50000000	        25.00 ns/op	      48 B/op	       1 allocs/op
+BenchmarkLIDVerifyParallel-10             8000000	       150.0 ns/op	     560 B/op	       8 allocs/op
+BenchmarkBIDWireFormat-10                 4000000	       300.0 ns/op	     296 B/op	       5 allocs/op
+BenchmarkEIDNew-10                      700000000	         2.000 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToTensorWords-10           1000000000	         0.3000 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToLLMFormat-10             400000000	         3.000 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDDeterministicIngestID-10    20000000	        60.00 ns/op	       0 B/op	       0 allocs/op

@@ -1,0 +1,25 @@
+{
+  "benchmarks": {
+    "bid_wire": {
+      "ns_per_op": 1000.0
+    },
+    "eid_from_parts": {
+      "ns_per_op": 10.0
+    },
+    "lid_from_parts": {
+      "ns_per_op": 500.0
+    },
+    "nid_hamming_distance": {
+      "ns_per_op": 20.0
+    },
+    "snid_generate_tensor_batch_be_bytes_100k": {
+      "ns_per_op": 10000000.0
+    },
+    "snid_new_fast": {
+      "ns_per_op": 100.0
+    },
+    "snid_to_wire_mat": {
+      "ns_per_op": 500.0
+    }
+  }
+}

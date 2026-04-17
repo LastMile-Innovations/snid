@@ -1,0 +1,17 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/neighbor/snid/go
+cpu: Apple M4
+BenchmarkSNIDNewFastParallel-10          	1000000000	         0.7622 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDStringMatterParallel-10     	58519456	        22.67 ns/op	      48 B/op	       1 allocs/op
+BenchmarkLIDVerifyParallel-10            	 8775829	       131.9 ns/op	     560 B/op	       8 allocs/op
+BenchmarkBIDWireFormat-10                	 4521374	       265.2 ns/op	     296 B/op	       5 allocs/op
+BenchmarkEIDNew-10                       	711200142	         1.664 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToTensorWords-10            	1000000000	         0.2401 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToLLMFormat-10              	433879609	         2.769 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDDeterministicIngestID-10    	24048457	        49.84 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/neighbor/snid/go	9.620s
+?   	github.com/neighbor/snid/go/internal/vector	[no test files]
+PASS
+ok  	github.com/neighbor/snid/go/neo4j	0.271s
