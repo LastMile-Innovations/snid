@@ -24,8 +24,8 @@ The "Ultimate ID" theoretical spec combines every desirable property. Here's how
 
 | ID Type | Size | Entropy | Time-Ordered | Zero Leakage | Human-Friendly | Speed | Distributed | Standard | Extensible | Ultimate Score |
 |---------|------|---------|--------------|--------------|----------------|-------|-------------|----------|-------------|----------------|
-| **SNID** | 16 bytes | 122+ bits | ✅ Yes | ❌ No (timestamp) | 22 chars Base58 | **3.7 ns** | ✅ Yes | ✅ UUIDv7-compatible | ✅ Yes (10+ families) | **8.8/10** |
-| **UUIDv7** | 16 bytes | 122+ bits | ✅ Yes | ❌ No (timestamp) | 36 chars hex | 236.9 ns | ✅ Yes | ✅ RFC 9562 | ✅ Version/variant | **9.2/10** |
+| **SNID** | 16 bytes | 122+ bits | ✅ Yes | ❌ No (timestamp) | 22 chars Base58 | **4.1 ns** | ✅ Yes | ✅ UUIDv7-compatible | ✅ Yes (10+ families) | **8.8/10** |
+| **UUIDv7** | 16 bytes | 122+ bits | ✅ Yes | ❌ No (timestamp) | 36 chars hex | 297.8 ns | ✅ Yes | ✅ RFC 9562 | ✅ Version/variant | **9.2/10** |
 | **ULID** | 16 bytes | 122+ bits | ✅ Yes | ❌ No (timestamp) | 26 chars Base32 | 44.2 ns | ✅ Yes | ❌ No RFC | ❌ No | **9.0/10** |
 | **Snowflake** | 8 bytes | ~64 bits | ✅ Yes | ❌ No (timestamp) | 19 chars decimal | ~10 ns | ❌ Needs worker ID | ❌ No RFC | ❌ No | **8.7/10** |
 | **NanoID** | 8-21 bytes | Configurable | ❌ No | ✅ Yes (no timestamp) | 21 chars URL-safe | ~6 ns | ✅ Yes | ❌ No RFC | ❌ No | **8.5/10** |
@@ -78,7 +78,7 @@ In 2026, the unique ID landscape has matured significantly:
 
 **4. Human Readability & URL Safety**
 - **Best**: NanoID, CUID2, ULID (Base32 is clean and case-insensitive).
-- **SNID**: Base58 (22 chars) - good length but not URL-safe (has `+` and `/`).
+- **SNID**: Bitcoin Base58 (22 chars) - good length, URL-safe alphabet, case-sensitive.
 - **Worst**: UUID (hyphens + long hex), KSUID.
 
 **5. Standardization & Ecosystem**
@@ -93,7 +93,7 @@ In 2026, the unique ID landscape has matured significantly:
 |---------|---------|---------|--------|------|-------|------|
 | **Size** | 16 bytes | 16 bytes | 8-21 bytes | 16 bytes | 20 bytes | 16 bytes |
 | **Ordering** | Random | Time-ordered | Random | Time-ordered | Time-ordered | Time-ordered |
-| **Generation** | ~50ns | ~50ns | ~30ns | ~50ns | ~100ns | ~3.7ns (Go) |
+| **Generation** | ~50ns | ~50ns | ~30ns | ~50ns | ~100ns | 4.106ns (Go, current local artifact) |
 | **Encoding** | Hex | Hex | URL-safe Base64 | Base32 | Base62 | Base58 |
 | **Checksum** | No | No | No | No | No | Yes (CRC8) |
 | **Atoms** | No | No | No | No | No | Yes |
@@ -225,9 +225,9 @@ When choosing an ID format, **speed** and **size** are two of the biggest real-w
 ### 2. Speed (Generation + Insert Speed)
 
 **Generation Speed**
-- SNID: 3.7 ns (268M ops/sec) - fastest among time-ordered IDs
+- SNID: 4.106 ns (243.5M ops/sec) - fastest among time-ordered IDs in the current local artifact
 - NanoID/CUID2: ~6-7 ns (hundreds of thousands of IDs per second)
-- UUIDv4/v7: ~200-250 ns (4-5M ops/sec)
+- UUIDv4/v7: ~200-300 ns (3-5M ops/sec)
 - At extreme scale (Twitter/X, TikTok, payment systems) this difference matters for hot paths
 
 **Database Insert Throughput**
@@ -248,13 +248,13 @@ This is the **#1 reason** time-ordered IDs (UUIDv7, ULID, SNID, Snowflake) domin
 | **Uniqueness**            | Collisions = data corruption, duplicate records, hard-to-debug bugs                         | ✅ 122+ bits (excellent) |
 | **Time-orderability**     | Enables natural sorting, efficient "recent data" queries, and massive insert performance    | ✅ Yes (48-bit ms timestamp) |
 | **Security / Privacy**    | Leaking timestamps or node IDs = user profiling, IDOR attacks, GDPR fines                    | ⚠️ Timestamp leakage (use dual-ID for public APIs) |
-| **Human Friendliness**    | Short, URL-safe, copy-paste friendly = better UX, fewer support tickets                     | ⚠️ 22 chars (good length, not URL-safe) |
+| **Human Friendliness**    | Short, URL-safe, copy-paste friendly = better UX, fewer support tickets                     | ✅ 22 chars, Bitcoin Base58 alphabet |
 | **Distributed Generation**| No coordination = works in microservices, edge functions, client-side without locking       | ✅ Yes (fully coordination-free) |
 | **Standardization**       | Native DB support, battle-tested libraries, easier hiring/onboarding                        | ✅ UUIDv7-compatible (RFC 9562) |
 | **Immutability**          | IDs must never change (breaks foreign keys, caches, URLs)                                   | ✅ Yes (immutable surrogate key) |
 | **Entropy Quality**       | Weak randomness = predictable IDs → brute-force attacks                                      | ✅ CSPRNG in all implementations |
 | **Future-proofing**       | Timestamp range must last decades; entropy must survive Moore's Law                          | ✅ Unix ms (year 584,556,054) |
-| **Generation Speed**      | Hot path performance at extreme scale                                                       | ✅ 3.7 ns (268M ops/sec) |
+| **Generation Speed**      | Hot path performance at extreme scale                                                       | ✅ 4.106 ns (243.5M ops/sec) |
 | **String Size**           | Network bandwidth, JSON payload size, storage for string columns                            | ✅ 22 chars (39% smaller than UUID) |
 | **Binary Size**           | Database storage, index size, memory efficiency                                             | ⚠️ 16 bytes (not 8-byte ideal like Snowflake) |
 
@@ -320,10 +320,10 @@ Production migrations report:
 - Cloud egress cost (AWS $0.09/GB): **$32/month savings**
 
 **Generation Speed Cost Impact:**
-- SNID: 3.7 ns = 268M ops/sec per core
-- UUIDv7: 236.9 ns = 4.2M ops/sec per core
-- SNID is **63.5× faster** = can handle same load with **1/64th the CPU**
-- For a service generating 10M IDs/sec: SNID needs ~0.04 cores vs UUIDv7 needs ~2.4 cores
+- SNID: 4.106 ns = 243.5M ops/sec per core
+- UUIDv7: 297.8 ns = 3.36M ops/sec per core
+- SNID is **72.5× faster** = can handle same load with about **1/72nd the CPU**
+- For a service generating 10M IDs/sec: SNID needs ~0.04 cores vs UUIDv7 needs ~3 cores
 - Cloud compute cost savings: **~$50-100/month** (depending on instance type)
 
 ## Performance Benchmarks (Verified - Apple M4, 2026)
@@ -332,14 +332,14 @@ Production migrations report:
 
 | System | Latency | Relative to SNID (Go) | Research Avg (μs) |
 |--------|---------|----------------------|-------------------|
-| SNID (Go) | 3.728 ns | 1x | - |
+| SNID (Go) | 4.106 ns | 1x | - |
 | SNID (Rust) | ~5 ns | ~1.34x | - |
 | SNID (Python, batch) | ~5.4 ns/ID | ~1.45x | - |
-| UUID v7 (google/uuid) | 236.9 ns | 63.5x | ~71.8 μs |
-| UUID v4 (google/uuid) | 200.5 ns | 53.8x | ~71.4 μs |
-| ULID (oklog/ulid) | 44.16 ns | 11.8x | ~13 μs |
-| XID (rs/xid) | 35.12 ns | 9.4x | - |
-| KSUID (segmentio/ksuid) | 244.1 ns | 65.5x | - |
+| UUID v7 (google/uuid) | 297.8 ns | 72.5x | ~71.8 μs |
+| UUID v4 (google/uuid) | 200.5 ns | 48.8x | ~71.4 μs |
+| ULID (oklog/ulid) | 44.16 ns | 10.8x | ~13 μs |
+| XID (rs/xid) | 35.12 ns | 8.6x | - |
+| KSUID (segmentio/ksuid) | 244.1 ns | 59.4x | - |
 | NanoID (default) | ~6-8 ns (research) | ~1.6-2.1x | ~6-8 μs |
 | Snowflake | ~49 μs (research) | ~13.1x | ~49 μs |
 | CUID2 | ~10-15 μs (research) | ~2.7-4x | ~10-15 μs |

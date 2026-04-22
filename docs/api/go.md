@@ -56,7 +56,7 @@ func New(atom Atom) ID
 
 ### NewFast
 
-Generate a new SNID with lock-free per-P state (~3.7ns).
+Generate a new SNID with lock-free per-P state. Current local Go artifact: 4.106ns, 0 allocs.
 
 ```go
 func NewFast() ID
@@ -326,10 +326,11 @@ func insertItem(db *sql.DB, id snid.ID, name string) error {
 
 ## Performance
 
-- `NewFast()`: ~3.7ns
-- `NewBatch(1000)`: ~2μs
-- `String()`: ~50ns
-- `FromString()`: ~100ns
+- `NewFast()`: 4.106ns, 0 allocs
+- `NewBurst(1000)`: 2.132μs, 1 alloc for the returned slice
+- `String()`: 106.5ns, 1 alloc
+- `AppendTo()`: 94.42ns, 0 allocs with caller-provided capacity
+- `FromString()`: 173.4ns, 0 allocs
 
 ## See Also
 

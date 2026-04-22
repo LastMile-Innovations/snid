@@ -6,7 +6,7 @@ Performance benchmarks for SNID across implementations with a portable, cloud-ag
 
 SNID is optimized for high-performance ID generation:
 
-- **Go**: ~3.7ns per ID (NewFast), ~1.7ns (TurboStreamer hot loop)
+- **Go**: 4.106ns per ID (NewFast, current local artifact), ~1.7ns (TurboStreamer hot loop)
 - **Rust**: ~5ns per ID (deterministic core)
 - **Python**: ~15ns per ID (native bindings), ~5μs for 1000 batch (bytes backend)
 
@@ -125,11 +125,13 @@ See [deploy/RAILWAY.md](../../deploy/RAILWAY.md) for detailed setup.
 
 ## Benchmark Results
 
+Latest local Go artifact: `conformance/artifacts/go-local/bench.txt`, Apple M4, `BENCH_COUNT=1`, Go package `github.com/LastMile-Innovations/snid`.
+
 ### Single ID Generation
 
 | Implementation | Operation | Latency | Notes |
 |----------------|-----------|---------|-------|
-| Go | NewFast() | ~3.7ns | Lock-free per-P state |
+| Go | NewFast() | 4.106ns | Lock-free per-P state, 0 allocs |
 | Go | TurboStreamer.Next() | ~1.7ns | Hot loop, single-thread |
 | Rust | new() | ~5ns | Deterministic core |
 | Python | new_fast() | ~15ns | Native bindings |
@@ -138,7 +140,7 @@ See [deploy/RAILWAY.md](../../deploy/RAILWAY.md) for detailed setup.
 
 | Implementation | Operation | Count | Total Time | Per ID |
 |----------------|-----------|-------|------------|--------|
-| Go | NewBatch() | 1000 | ~2μs | ~2ns |
+| Go | NewBurst() | 1000 | 2.132μs | ~2.13ns |
 | Rust | generate_batch() | 1000 | ~3μs | ~3ns |
 | Python | generate_batch(bytes) | 1000 | ~5μs | ~5ns |
 | Python | generate_batch(tensor) | 1000 | ~8μs | ~8ns |
@@ -146,14 +148,24 @@ See [deploy/RAILWAY.md](../../deploy/RAILWAY.md) for detailed setup.
 
 ### Encoding/Decoding
 
-| Implementation | Operation | Latency |
-|----------------|-----------|---------|
-| Go | String() | ~50ns |
-| Go | FromString() | ~100ns |
-| Rust | to_wire() | ~60ns |
-| Rust | parse_wire() | ~120ns |
-| Python | to_wire() | ~80ns |
-| Python | parse_wire() | ~150ns |
+| Implementation | Operation | Latency | Allocation |
+|----------------|-----------|---------|------------|
+| Go | String() | 106.5ns | 48 B, 1 alloc |
+| Go | StringCompact() | 107.3ns | 24 B, 1 alloc |
+| Go | AppendTo() | 94.42ns | 0 B, 0 allocs |
+| Go | FromString() | 173.4ns | 0 B, 0 allocs |
+| Go | ParseCompact() | 171.1ns | 0 B, 0 allocs |
+| Go | Base58 encode, 8 bytes | 50.89ns | 16 B, 1 alloc |
+| Go | Base58 decode, 8 bytes | 42.18ns | 8 B, 1 alloc |
+| Go | Base58 encode, 24 bytes | 786.7ns | 48 B, 1 alloc |
+| Go | Base58 decode, 24 bytes | 321.1ns | 24 B, 1 alloc |
+| Go | EncodeAKIDSecret() | 845.8ns | 96 B, 2 allocs |
+| Go | VerifyAKIDSecretChecksum() | 331.2ns | 24 B, 1 alloc |
+| Go | ParseAKID() | 566.4ns | 56 B, 2 allocs |
+| Rust | to_wire() | ~60ns | n/a |
+| Rust | parse_wire() | ~120ns | n/a |
+| Python | to_wire() | ~80ns | n/a |
+| Python | parse_wire() | ~150ns | n/a |
 
 ## Statistical Analysis
 
@@ -232,7 +244,7 @@ Matching invariants for cross-language validation.
 
 | Metric | UUID v4 | SNID |
 |--------|---------|------|
-| Generation | ~50ns | ~3.7ns (Go) |
+| Generation | ~50ns | 4.106ns (Go) |
 | Ordering | Random | Time-ordered |
 | Collisions | Possible | Extremely unlikely |
 | Size | 16 bytes | 16 bytes |
@@ -241,7 +253,7 @@ Matching invariants for cross-language validation.
 
 | Metric | ULID | SNID |
 |--------|------|------|
-| Generation | ~50ns | ~3.7ns (Go) |
+| Generation | ~50ns | 4.106ns (Go) |
 | Encoding | Base32 | Base58 |
 | Time precision | Milliseconds | Milliseconds |
 | Extended families | No | Yes |
@@ -250,7 +262,7 @@ Matching invariants for cross-language validation.
 
 | Metric | KSUID | SNID |
 |--------|-------|------|
-| Generation | ~100ns | ~3.7ns (Go) |
+| Generation | ~100ns | 4.106ns (Go) |
 | Size | 20 bytes | 16 bytes |
 | Time precision | Seconds | Milliseconds |
 | Extended families | No | Yes |

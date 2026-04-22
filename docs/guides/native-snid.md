@@ -7,7 +7,7 @@ The native SNID protocol and its extended identifier families.
 Native SNID is the recommended choice for new projects. It provides superior performance, extended identifier families, AI/ML integration, and polyglot conformance across Go, Rust, and Python.
 
 **Why choose Native SNID:**
-- Best performance (~3.7ns generation in Go)
+- Best performance (4.106ns generation in the current local Go artifact)
 - Extended ID families (SGID, NID, LID, KID, etc.)
 - AI/ML integration (tensor projections, LLM formats)
 - Polyglot conformance (byte-identical across languages)
@@ -283,10 +283,11 @@ Native SNID provides industry-leading performance:
 
 | Operation | Go | Rust | Python |
 |-----------|-----|------|--------|
-| NewFast() | ~3.7ns | ~5ns | ~15ns |
-| NewBatch(1000) | ~2μs | ~3μs | ~5μs (bytes) |
-| String() | ~50ns | ~60ns | ~80ns |
-| FromString() | ~100ns | ~120ns | ~150ns |
+| NewFast() | 4.106ns | ~5ns | ~15ns |
+| NewBurst(1000) | 2.132μs | ~3μs | ~5μs (bytes) |
+| String() | 106.5ns | ~60ns | ~80ns |
+| AppendTo() | 94.42ns | n/a | n/a |
+| FromString() | 173.4ns | ~120ns | ~150ns |
 
 See [Performance Benchmarks](../performance/benchmarks.md) for details.
 

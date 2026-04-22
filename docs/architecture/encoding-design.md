@@ -7,8 +7,9 @@ Base58 encoding and checksum implementation.
 SNID uses Base58 encoding with CRC8 checksum for wire format:
 - Base58 alphabet (no ambiguous characters)
 - CRC8-derived check digit for error detection
-- Optimized 128-bit integer division for encoding
-- Unsafe string-byte conversions for performance
+- Optimized 128-bit integer division for 16-byte SNID wire payloads
+- Canonical Bitcoin-style Base58 for auxiliary byte payloads such as AKID secrets and short IDs
+- Zero-allocation parse paths for SNID wire payloads
 
 ## Base58 Alphabet
 
@@ -18,50 +19,58 @@ SNID uses Base58 encoding with CRC8 checksum for wire format:
 
 Excludes: `0`, `O`, `I`, `l` (ambiguous characters)
 
+This is the Bitcoin Base58 alphabet. It does not use `+` or `/`; the wire format is URL-safe aside from normal delimiter escaping rules.
+
 ## Encoding Process
 
-### Binary to Base58
+### 16-byte SNID payload to Base58
 
 ```go
-func encodeBase58(data []byte) string {
-    // 128-bit integer division
-    x := new(big.Int).SetBytes(data)
-    
-    // Base58 conversion
-    var result []byte
-    base := big.NewInt(58)
-    zero := big.NewInt(0)
-    mod := new(big.Int)
-    
-    for x.Cmp(zero) > 0 {
-        x.DivMod(x, base, mod)
-        result = append(result, alphabet[mod.Int64()])
+func (id ID) appendPayload(dst []byte) []byte {
+    var buf [24]byte
+    idx := 23
+
+    buf[idx] = base58Alphabet[crc8(id[:])%58]
+    idx--
+
+    hi := binary.BigEndian.Uint64(id[:8])
+    lo := binary.BigEndian.Uint64(id[8:])
+    for hi > 0 || lo > 0 {
+        qhi := hi / 58
+        rhi := hi - qhi*58
+        qlo, rem := bits.Div64(rhi, lo, 58)
+        hi, lo = qhi, qlo
+        buf[idx] = base58Alphabet[rem]
+        idx--
     }
-    
-    // Reverse result
-    for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
-        result[i], result[j] = result[j], result[i]
+
+    for i := 0; i < 16 && id[i] == 0; i++ {
+        buf[idx] = '1'
+        idx--
     }
-    
-    return string(result)
+
+    return append(dst, buf[idx+1:]...)
 }
 ```
+
+The 16-byte SNID hot path avoids `big.Int` and external Base58 dependencies. The checksum character is a Base58 symbol selected from `crc8(id[:]) % 58`.
+
+### Auxiliary bytes to Base58
+
+AKID secrets and `ShortID` payloads use canonical big-endian Base58 conversion:
+
+- leading zero bytes are preserved as leading `1` characters
+- division uses `(carry << 8) | byte` across the significant input window
+- stack scratch space covers current 8-byte and 24-byte call sites without external dependencies
+- decode mirrors the same representation and preserves leading zero bytes exactly
 
 ### Checksum Calculation
 
 ```go
 func checksum(data []byte) byte {
-    // CRC8-derived check digit
     var crc byte
     for _, b := range data {
-        crc ^= b
-        for i := 0; i < 8; i++ {
-            if crc&0x80 != 0 {
-                crc = (crc << 1) ^ 0x07
-            } else {
-                crc <<= 1
-            }
-        }
+        crc = crc8Table[crc^b]
     }
     return crc
 }
@@ -69,31 +78,27 @@ func checksum(data []byte) byte {
 
 ## Decoding Process
 
-### Base58 to Binary
+### SNID payload to binary
 
 ```go
-func decodeBase58(s string) ([]byte, error) {
-    x := big.NewInt(0)
-    base := big.NewInt(58)
-    
-    for _, c := range s {
-        idx := bytes.IndexByte(alphabet, byte(c))
-        if idx == -1 {
-            return nil, errors.New("invalid character")
+func decode16Base58(id *ID, src []byte) error {
+    *id = Zero
+    for _, c := range src {
+        val := b58Map[c]
+        if val == -1 {
+            return errors.New("snid: invalid char")
         }
-        x.Mul(x, base)
-        x.Add(x, big.NewInt(int64(idx)))
+        carry := uint32(val)
+        for i := 15; i >= 0; i-- {
+            res := uint32(id[i])*58 + carry
+            id[i] = byte(res)
+            carry = res >> 8
+        }
+        if carry > 0 {
+            return errors.New("snid: overflow")
+        }
     }
-    
-    return x.Bytes(), nil
-}
-```
-
-### Checksum Validation
-
-```go
-func validateChecksum(data []byte, expected byte) bool {
-    return checksum(data) == expected
+    return nil
 }
 ```
 
@@ -101,28 +106,13 @@ func validateChecksum(data []byte, expected byte) bool {
 
 ### 128-bit Integer Division
 
-Optimized division for 128-bit values:
+SNID wire encoding treats the 16-byte ID as a 128-bit big-endian integer split into `hi` and `lo` words. Each Base58 digit is emitted by dividing `(hi:lo)` by 58 with `bits.Div64`, which avoids heap allocation and avoids external Base58 libraries.
 
-```go
-func encodeUint128(hi, lo uint64) string {
-    // Optimized division for 128-bit values
-    // Avoids big.Int overhead
-}
-```
+### Allocation behavior
 
-### Unsafe String-Byte Conversion
-
-Zero-copy string-byte conversion:
-
-```go
-func bytesToString(b []byte) string {
-    return *(*string)(unsafe.Pointer(&b))
-}
-
-func stringToBytes(s string) []byte {
-    return *(*[]byte)(unsafe.Pointer(&s))
-}
-```
+- `AppendTo` can encode an atom-prefixed SNID wire string with zero allocations when the caller provides capacity.
+- `String` and `StringCompact` allocate only the returned string.
+- `FromString` and `ParseCompact` are zero-allocation in current Go benchmarks.
 
 ## Wire Format Construction
 
@@ -134,17 +124,10 @@ func stringToBytes(s string) []byte {
 
 ```go
 func (id ID) String(atom Atom) string {
-    // Encode to Base58
-    payload := encodeBase58(id[:])
-    
-    // Calculate checksum
-    ck := checksum(id[:])
-    
-    // Append checksum
-    payload += string(alphabet[ck])
-    
-    // Add atom prefix
-    return atom.String() + ":" + payload
+    var buf [48]byte
+    n := copy(buf[:], string(atom))
+    buf[n] = ':'
+    return bytesToString(id.appendPayload(buf[:n+1]))
 }
 ```
 
@@ -152,40 +135,9 @@ func (id ID) String(atom Atom) string {
 
 ```go
 func FromString(s string) (ID, Atom, error) {
-    // Split atom and payload
-    parts := strings.Split(s, ":")
-    if len(parts) != 2 {
-        return ID{}, "", errors.New("invalid format")
-    }
-    
-    atom := ParseAtom(parts[0])
-    payload := parts[1]
-    
-    // Separate checksum
-    if len(payload) < 1 {
-        return ID{}, "", errors.New("invalid payload")
-    }
-    
-    data := payload[:len(payload)-1]
-    ck := payload[len(payload)-1]
-    
-    // Decode Base58
-    bytes, err := decodeBase58(data)
-    if err != nil {
-        return ID{}, "", err
-    }
-    
-    // Validate checksum
-    expected := checksum(bytes)
-    if alphabet[expected] != ck {
-        return ID{}, "", errors.New("checksum mismatch")
-    }
-    
-    // Convert to ID
     var id ID
-    copy(id[:], bytes)
-    
-    return id, atom, nil
+    atom, err := id.Parse(s)
+    return id, atom, err
 }
 ```
 
@@ -194,7 +146,7 @@ func FromString(s string) (ID, Atom, error) {
 ### Invalid Characters
 
 ```go
-if idx == -1 {
+if val == -1 {
     return nil, errors.New("invalid character in Base58")
 }
 ```
@@ -202,7 +154,7 @@ if idx == -1 {
 ### Checksum Mismatch
 
 ```go
-if checksum(bytes) != expected {
+if payload[dataLen] != base58Alphabet[crc8(id[:])%58] {
     return nil, errors.New("checksum mismatch")
 }
 ```
