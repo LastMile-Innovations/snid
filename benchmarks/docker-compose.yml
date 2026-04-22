@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  snid-benchmarks:
+    build:
+      context: ..
+      dockerfile: benchmarks/Dockerfile
+    container_name: snid-benchmarks
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      # Persist benchmark results on host
+      - ./results:/app/results
+    environment:
+      - BENCH_MODE=${BENCH_MODE:-web}
+      - BENCH_PURE_MODE=${BENCH_PURE_MODE:-true}
+      - RESULTS_DIR=/app/results
+      - PORT=${PORT:-8080}
+      - REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-10}
+      - BENCH_SUITES=${BENCH_SUITES:-all}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # CLI mode service for one-off benchmark runs
+  snid-benchmarks-cli:
+    build:
+      context: ..
+      dockerfile: benchmarks/Dockerfile
+    container_name: snid-benchmarks-cli
+    volumes:
+      - ./results:/app/results
+    environment:
+      - BENCH_MODE=cli
+      - RESULTS_DIR=/app/results
+      - BENCH_SUITES=${BENCH_SUITES:-all}
+      - REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-10}
+    profiles:
+      - cli

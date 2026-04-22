@@ -40,6 +40,57 @@ Normative rules:
 - The generator strategy is implementation-defined.
 - The reserved tombstone or ghost bit is a protocol-level reservation inside the entropy tail for derived masking flows. Existing byte layouts are preserved; consumers must treat ghosting as a projection-compatible semantic, not a reason to reinterpret the machine field.
 
+## 2.1 UUIDv7 Compatibility
+
+SNID is designed to be a true drop-in replacement for RFC 9562 UUIDv7. The core SNID byte layout is compatible with UUIDv7.
+
+### UUIDv7 Binary Layout (RFC 9562)
+
+```
+Bits 0-47:     unix_ts_ms (48-bit Unix timestamp in milliseconds, big-endian)
+Bits 48-51:    Version = 0b0111
+Bits 52-63:    rand_a (12 bits) - used for monotonicity or sub-ms precision
+Bits 64-65:    Variant = 0b10
+Bits 66-127:   rand_b (62 bits) - random
+```
+
+### SNID to UUIDv7 Mapping
+
+The SNID byte layout maps to UUIDv7 as follows:
+
+| SNID Bits | UUIDv7 Bits | Mapping |
+|-----------|-------------|---------|
+| 0-47 | 0-47 | unix_ts_ms (identical) |
+| 48-51 | 48-51 | Version = 0b0111 (identical) |
+| 52-65 | 52-63 | SNID: 14-bit monotonic sequence → UUIDv7: 12-bit rand_a (lower 12 bits) |
+| 64-65 | 64-65 | Variant = 0b10 (identical) |
+| 66-89 | 66-89 | SNID: 24-bit machine/fingerprint → UUIDv7: rand_b (bits 0-23) |
+| 90-127 | 90-127 | SNID: 38-bit entropy tail → UUIDv7: rand_b (bits 24-61) |
+
+### Compatibility Guarantees
+
+**Byte-for-byte compatibility:**
+- When using `NewUUIDv7()` or equivalent mode, SNID produces byte-for-byte identical output to reference UUIDv7 implementations
+- Reference implementations: .NET 9, uuid crate v7, Python 3.14 uuid7, PostgreSQL uuid_generate_v7()
+- Conformance suite includes UUIDv7 compatibility vectors
+
+**String format compatibility:**
+- SNID supports standard UUID string format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+- SNID wire format (`ATOM:payload`) is an alternative presentation layer
+
+**Migration support:**
+- `ToUUIDv7()` converts SNID to UUIDv7 format
+- `FromUUIDv7()` converts UUIDv7 to SNID
+- Conversion is lossless for UUIDv7-compatible SNIDs
+
+### Implementation Requirements
+
+All implementations must:
+1. Provide `NewUUIDv7()` / `GenerateV7()` functions that produce RFC 9562-compliant UUIDv7 bytes
+2. Support both standard UUID string format and raw 16-byte binary
+3. Include UUIDv7 compatibility vectors in conformance testing
+4. Validate against reference implementations in CI/CD
+
 ## 3. Canonical Wire Format
 
 Canonical wire format:
@@ -273,3 +324,47 @@ These are intentionally left implementation-defined:
 - zero-copy NumPy, Arrow, Polars, or similar bindings
 
 Those workstreams are tracked separately in `docs/IMPLEMENTATION_TRACKS.md`.
+
+## 10. Security Considerations
+
+### Information Leakage
+
+SNID, like UUIDv7, includes timestamp and machine information in its byte layout:
+
+- **Timestamp leakage**: Bits 0-47 contain Unix timestamp in milliseconds. This reveals creation time with millisecond precision.
+- **Machine fingerprinting**: Bits 66-89 contain machine/process fingerprint or shard field. This may reveal infrastructure details.
+
+### Recommended Usage Patterns
+
+**Internal/Backend Use:**
+- SNID is excellent for internal database primary keys
+- Time-ordering provides database performance benefits
+- Timestamp leakage is acceptable for internal systems
+
+**Public-Facing APIs:**
+- Consider dual-ID strategy for public-facing resources:
+  - Internal: SNID (time-ordered for DB performance)
+  - External: UUIDv4 or sufficiently long NanoID (random for privacy)
+- Never expose SNID in public URLs or API responses if timestamp leakage is a concern
+
+**Security-Sensitive Use:**
+- For session tokens, CSRF tokens, or similar security-critical identifiers, use UUIDv4 or dedicated token systems
+- SNID is not designed for cryptographic security or secret management
+
+### Implementation Security Requirements
+
+All implementations MUST:
+- Use cryptographically secure random number generators (CSPRNG)
+- Never fall back to non-crypto RNG (see CVE-2025-66630)
+- Monitor for CSPRNG failures in production
+- Document any CSPRNG fallback behavior
+
+### Authorization and Access Control
+
+IDs alone should never grant access. Systems using SNID MUST:
+- Implement proper authorization checks for all ID-based operations
+- Never rely on ID obscurity for security
+- Use rate limiting and anomaly detection on ID-accepting endpoints
+- Implement IDOR (Insecure Direct Object Reference) protections
+
+For detailed security analysis, see `docs/security-analysis.md`.

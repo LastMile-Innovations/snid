@@ -1,0 +1,176 @@
+name: CI + Benchmarks (2026 Best Practices)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  # Quality Gate - Fast feedback on every commit
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [go, rust, python]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+
+      - name: Setup Rust
+        if: matrix.language == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Python
+        if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Format check
+        run: |
+          if [ "${{ matrix.language }}" = "go" ]; then
+            cd go && gofmt -l .
+          elif [ "${{ matrix.language }}" = "rust" ]; then
+            cd rust && cargo fmt -- --check
+          elif [ "${{ matrix.language }}" = "python" ]; then
+            cd python && ruff format --check .
+          fi
+
+      - name: Lint
+        run: |
+          if [ "${{ matrix.language }}" = "go" ]; then
+            cd go && golangci-lint run || true
+          elif [ "${{ matrix.language }}" = "rust" ]; then
+            cd rust && cargo clippy
+          elif [ "${{ matrix.language }}" = "python" ]; then
+            cd python && ruff check .
+          fi
+
+      - name: Test
+        run: |
+          if [ "${{ matrix.language }}" = "go" ]; then
+            cd go && go test ./... -race -count=1
+          elif [ "${{ matrix.language }}" = "rust" ]; then
+            cd rust && cargo test --all-features
+          elif [ "${{ matrix.language }}" = "python" ]; then
+            pip install -e ./python[test]
+            cd python && python -m pytest tests/ -q
+          fi
+
+  # Conformance - Non-negotiable release gate
+  conformance:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate vectors
+        working-directory: conformance/cmd/generate_vectors
+        run: go run . --out ../../vectors.json
+
+      - name: Validate Go
+        working-directory: go
+        run: go test ./...
+
+      - name: Validate Rust
+        working-directory: rust
+        run: cargo test
+
+      - name: Build Python extension
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --manifest-path python/Cargo.toml
+
+      - name: Validate Python
+        working-directory: python
+        run: python -m unittest discover -s tests
+
+      - name: Validate benchmark comparison logic
+        run: python -m unittest discover -s conformance/tests
+
+      - name: Compare polyglot projections
+        run: python conformance/compare_polyglot.py
+
+  # Benchmark - Performance regression detection
+  benchmark:
+    runs-on: ubuntu-latest
+    needs: conformance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install benchstat
+        run: go install golang.org/x/perf/cmd/benchstat@latest
+
+      - name: Install Python benchmark dependencies
+        run: python -m pip install -e ./python[test]
+
+      - name: Build Python extension
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --manifest-path python/Cargo.toml
+
+      - name: Run Go benchmarks
+        run: bash conformance/run_go_bench.sh
+
+      - name: Go benchstat summary
+        run: |
+          "$(go env GOPATH)/bin/benchstat" conformance/baselines/go.txt conformance/artifacts/go/bench.txt
+
+      - name: Enforce Go regression threshold
+        run: python conformance/compare_benchmarks.py --language go --baseline conformance/baselines/go.txt --current conformance/artifacts/go/bench.txt --threshold-pct 5
+
+      - name: Run Rust benchmarks
+        working-directory: rust
+        run: cargo bench --features data
+
+      - name: Export Rust benchmark summary
+        working-directory: rust
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("target/criterion")
+          benchmarks = {}
+          for estimates in root.glob("**/new/estimates.json"):
+            if estimates.parts[-3] == "report":
+              continue
+            bench_name = estimates.parts[-4]
+            data = json.loads(estimates.read_text())
+            benchmarks[bench_name] = {"ns_per_op": data["mean"]["point_estimate"]}
+          Path("../conformance/artifacts/rust").mkdir(parents=True, exist_ok=True)
+          Path("../conformance/artifacts/rust/bench.json").write_text(json.dumps({"benchmarks": benchmarks}, indent=2, sort_keys=True))
+          PY
+
+      - name: Enforce Rust regression threshold
+        run: python conformance/compare_benchmarks.py --language rust --baseline conformance/baselines/rust.json --current conformance/artifacts/rust/bench.json --threshold-pct 5
+
+      - name: Run Python benchmarks
+        working-directory: python
+        run: pytest tests/test_bench.py --benchmark-json ../conformance/artifacts/python-bench.json
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: polyglot-benchmarks
+          path: conformance/artifacts

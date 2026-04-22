@@ -353,7 +353,7 @@ func (s *adaptiveShard) batchFast(n int) []ID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for i := range n {
+	for i := 0; i < n; i++ {
 		ms := unixMilliCoarse()
 		if ms > s.lastMS {
 			s.lastMS = ms
@@ -387,7 +387,7 @@ func (s *adaptiveShard) batchSecure(n int) []ID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for i := range n {
+	for i := 0; i < n; i++ {
 		ms := unixMilliCoarse()
 		if ms > s.lastMS {
 			s.lastMS = ms

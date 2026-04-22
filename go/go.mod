@@ -1,12 +1,15 @@
-module github.com/neighbor/snid/go
+module github.com/neighbor/snid
 
-go 1.24
+go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/mr-tron/base58 v1.2.0
-	github.com/uber/h3-go/v4 v4.2.0
+	github.com/uber/h3-go/v4 v4.4.1
 	github.com/zeebo/blake3 v0.2.4
 )
 
-require github.com/klauspost/cpuid/v2 v2.0.12 // indirect
+require (
+	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/zeebo/assert v1.3.1 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+)

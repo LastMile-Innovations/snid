@@ -1,4 +1,4 @@
-use snid_core::{Bid, Eid, Kid, Lid, Nid, Snid, VectorFile, Wid, Xid};
+use snid::{Bid, Eid, Kid, Lid, Nid, Snid, VectorFile, Wid, Xid};
 
 fn main() {
     let raw = std::fs::read_to_string("../conformance/vectors.json")
@@ -27,18 +27,30 @@ fn main() {
 
     let sgid = Snid::from_hex(&vectors.spatial.bytes_hex).unwrap();
     let head = Snid::from_hex(&vectors.neural.head_hex).unwrap();
-    let semantic: [u8; 16] = hex::decode(&vectors.neural.semantic_hex).unwrap().try_into().unwrap();
+    let semantic: [u8; 16] = hex::decode(&vectors.neural.semantic_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let nid = Nid::from_parts(head, semantic);
     let ledger_head = Snid::from_hex(&vectors.ledger.head_hex).unwrap();
-    let prev: [u8; 32] = hex::decode(&vectors.ledger.prev_hex).unwrap().try_into().unwrap();
+    let prev: [u8; 32] = hex::decode(&vectors.ledger.prev_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let payload = hex::decode(&vectors.ledger.payload_hex).unwrap();
     let key = hex::decode(&vectors.ledger.key_hex).unwrap();
     let lid = Lid::from_parts(ledger_head, prev, &payload, &key).unwrap();
     let world_head = Snid::from_hex(&vectors.world.head_hex).unwrap();
-    let scenario: [u8; 16] = hex::decode(&vectors.world.scenario_hex).unwrap().try_into().unwrap();
+    let scenario: [u8; 16] = hex::decode(&vectors.world.scenario_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let wid = Wid::from_parts(world_head, scenario);
     let edge_head = Snid::from_hex(&vectors.edge.head_hex).unwrap();
-    let edge_hash: [u8; 16] = hex::decode(&vectors.edge.edge_hex).unwrap().try_into().unwrap();
+    let edge_hash: [u8; 16] = hex::decode(&vectors.edge.edge_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let xid = Xid::from_parts(edge_head, edge_hash);
     let kid_head = Snid::from_hex(&vectors.capability.head_hex).unwrap();
     let actor = Snid::from_hex(&vectors.capability.actor_hex).unwrap();
@@ -46,10 +58,16 @@ fn main() {
     let capability = hex::decode(&vectors.capability.capability_hex).unwrap();
     let kid_key = hex::decode(&vectors.capability.key_hex).unwrap();
     let kid = Kid::from_parts(kid_head, actor, &resource, &capability, &kid_key).unwrap();
-    let eid_bytes: [u8; 8] = hex::decode(&vectors.ephemeral.bytes_hex).unwrap().try_into().unwrap();
+    let eid_bytes: [u8; 8] = hex::decode(&vectors.ephemeral.bytes_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let eid = Eid(u64::from_be_bytes(eid_bytes));
     let topology = Snid::from_hex(&vectors.bid.topology_hex).unwrap();
-    let content: [u8; 32] = hex::decode(&vectors.bid.content_hex).unwrap().try_into().unwrap();
+    let content: [u8; 32] = hex::decode(&vectors.bid.content_hex)
+        .unwrap()
+        .try_into()
+        .unwrap();
     let bid = Bid::from_parts(topology, content);
 
     let out = serde_json::json!({

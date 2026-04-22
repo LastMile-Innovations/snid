@@ -1,0 +1,7 @@
+[tools]
+golang = "1.24"
+rust = "1.70"
+python = "3.10"
+
+[env]
+GOBIN = "{{env.HOME}}/.local/bin"

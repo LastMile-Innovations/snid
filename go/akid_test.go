@@ -53,8 +53,9 @@ func BenchmarkParseAKID(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, _, err := ParseAKID(wire); err != nil {
-			b.Fatalf("ParseAKID returned error: %v", err)
+		benchID, benchString, benchErr = ParseAKID(wire)
+		if benchErr != nil {
+			b.Fatalf("ParseAKID returned error: %v", benchErr)
 		}
 	}
 }

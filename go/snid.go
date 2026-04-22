@@ -1,3 +1,27 @@
+// Package snid provides a polyglot sortable identifier protocol.
+//
+// SNID defines 128-bit time-ordered identifiers compatible with UUID v7,
+// plus extended families for spatial, neural, ledger, and capability use cases.
+//
+// Basic usage:
+//
+//	id := snid.New(snid.Matter)
+//	wire := id.String(snid.Matter)
+//	parsed, atom, err := snid.FromString(wire)
+//
+// Extended identifier families:
+//
+//	SGID - Spatial IDs with H3 geospatial encoding
+//	NID  - Neural IDs with semantic tail for vector search
+//	LID  - Ledger IDs with HMAC verification tail
+//	WID  - World/scenario IDs for simulation isolation
+//	XID  - Edge IDs for relationship identity
+//	KID  - Capability IDs with MAC-based verification
+//	EID  - Ephemeral 64-bit IDs
+//	BID  - Content-addressable IDs (topology + content hash)
+//	AKID - Dual-part public+secret credentials
+//
+// For protocol specification, see https://github.com/neighbor/snid/blob/main/docs/SPEC.md
 package snid
 
 import (

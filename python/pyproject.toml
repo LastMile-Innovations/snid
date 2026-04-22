@@ -1,25 +1,60 @@
 [build-system]
-requires = ["maturin>=1.7,<2.0"]
+requires = ["maturin>=1.7,<2.1"]
 build-backend = "maturin"
 
 [project]
 name = "snid"
-version = "0.1.0"
-description = "SNID Python bindings backed by snid-core"
+version = "0.2.0"
+description = "SNID Python bindings backed by snid-core - polyglot sortable identifier protocol"
+readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT OR Apache-2.0"}
+authors = [
+    {name = "Neighbor", email = "oss@neighbor.com"}
+]
+keywords = ["uuid", "identifier", "sortable", "distributed", "id"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+]
+repository = "https://github.com/neighbor/snid"
+homepage = "https://github.com/neighbor/snid"
 
 [project.optional-dependencies]
 data = [
-  "numpy>=1.26",
-  "pyarrow>=16",
+  "numpy>=2.4.4",
+  "pyarrow>=23.0.1",
   "polars>=1.0",
 ]
 test = [
-  "numpy>=1.26",
-  "pytest>=8.0",
-  "pytest-benchmark>=4.0",
+  "numpy>=2.4.4",
+  "pytest>=9.0.3",
+  "pytest-benchmark>=5.2.3",
+  "hypothesis>=6.152.1",
 ]
+ecosystem = [
+  "ulid-py>=1.1.0",
+  "ksuid>=0.5.0",
+  "nanoid>=2.0.0",
+  "cuid2>=2.0.0",
+  "snowflake-id>=0.1.0",
+  "timeflake>=0.2.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/neighbor/snid/blob/main/docs/SPEC.md"
+Source = "https://github.com/neighbor/snid"
 
 [tool.maturin]
 python-source = "."
 module-name = "snid.snid_native"
+features = ["data"]

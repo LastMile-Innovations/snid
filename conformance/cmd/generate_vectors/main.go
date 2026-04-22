@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	snid "github.com/neighbor/snid/go"
+	snid "github.com/neighbor/snid"
 )
 
 type vectorFile struct {
@@ -23,6 +23,7 @@ type vectorFile struct {
 	Ephemeral     eidCase           `json:"ephemeral"`
 	BID           bidCase           `json:"bid"`
 	Compatibility compatibilityCase `json:"compatibility"`
+	UUIDv7        uuidv7Case        `json:"uuidv7"`
 	Negative      negativeCase      `json:"negative"`
 }
 
@@ -125,6 +126,14 @@ type bidCase struct {
 type compatibilityCase struct {
 	BytesHex string `json:"bytes_hex"`
 	Wire     string `json:"wire"`
+}
+
+type uuidv7Case struct {
+	BytesHex        string `json:"bytes_hex"`
+	UUIDString      string `json:"uuid_string"`
+	TimestampMillis int64  `json:"timestamp_millis"`
+	Version         int    `json:"version"`
+	Variant         int    `json:"variant"`
 }
 
 type negativeCase struct {
@@ -303,6 +312,20 @@ func main() {
 		BytesHex: file.Core[0].BytesHex,
 		Wire:     file.Core[0].Wire,
 	}
+
+	// UUIDv7 compatibility vectors
+	uuidv7ID := snid.TestID(snid.Matter, ts, 1)
+	uuidv7UUID := uuidv7ID.UUID()
+	// Extract variant from bits 64-65 (byte 8, bits 6-7)
+	variant := (uuidv7ID[8] >> 6) & 0b11
+	file.UUIDv7 = uuidv7Case{
+		BytesHex:        hex.EncodeToString(uuidv7ID[:]),
+		UUIDString:      uuidv7UUID.String(),
+		TimestampMillis: uuidv7ID.Time().UnixMilli(),
+		Version:         int(uuidv7ID.Version()),
+		Variant:         int(variant),
+	}
+
 	file.Negative = negativeCase{
 		InvalidAtomWire:     "BAD:" + file.Core[0].Wire[4:],
 		InvalidBinaryHex:    "001122",

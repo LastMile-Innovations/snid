@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 	"unsafe"
-
-	"github.com/mr-tron/base58"
 )
 
 var (
@@ -330,7 +328,7 @@ func NewShort(atom Atom) ShortID {
 
 // String renders a short ID as `atom:<base58>`.
 func (sid ShortID) String(atom Atom) string {
-	return string(atom) + string(delimiterForFormat(DefaultWireFormat())) + base58.Encode(sid[:])
+	return string(atom) + string(delimiterForFormat(DefaultWireFormat())) + encodeBase58Bytes(sid[:])
 }
 
 // --- OBSERVABILITY: TRACE ID ---
@@ -431,20 +429,21 @@ func sanitizeAlias(s string) string {
 	}, s)
 }
 
-// encode16Base58 implements the corresponding operation.
+// encode16Base58 encodes a 16-byte value using SNID's checksum-bearing compact payload format.
 func encode16Base58(src [16]byte) string {
-	// Base58 encoding of 16 bytes -> ~22 chars
-	return base58.Encode(src[:])
+	var id ID
+	copy(id[:], src[:])
+	return id.StringCompact()
 }
 
-// decode16Base58Bytes implements the corresponding operation.
+// decode16Base58Bytes decodes the checksum-bearing compact payload produced by encode16Base58.
 func decode16Base58Bytes(s string) ([16]byte, error) {
-	b, err := base58.Decode(s)
-	if err != nil || len(b) != 16 {
+	var id ID
+	if err := id.ParseCompact(s); err != nil {
 		return [16]byte{}, ErrInvalidSignature
 	}
 	var sig [16]byte
-	copy(sig[:], b)
+	copy(sig[:], id[:])
 	return sig, nil
 }
 

@@ -11,6 +11,7 @@ import (
 type vectorFile struct {
 	Core          []coreVector        `json:"core"`
 	Compatibility compatibilityVector `json:"compatibility"`
+	UUIDv7        uuidv7Vector        `json:"uuidv7"`
 	Negative      negativeVector      `json:"negative"`
 }
 
@@ -35,6 +36,14 @@ type llmFormatVector struct {
 type compatibilityVector struct {
 	BytesHex string `json:"bytes_hex"`
 	Wire     string `json:"wire"`
+}
+
+type uuidv7Vector struct {
+	BytesHex        string `json:"bytes_hex"`
+	UUIDString      string `json:"uuid_string"`
+	TimestampMillis int64  `json:"timestamp_millis"`
+	Version         int    `json:"version"`
+	Variant         int    `json:"variant"`
 }
 
 type negativeVector struct {
@@ -98,6 +107,31 @@ func TestConformanceVectors(t *testing.T) {
 		t.Fatalf("compat wire mismatch: got %s want %s", got, vectors.Compatibility.Wire)
 	}
 
+	// UUIDv7 compatibility validation
+	uuidv7Raw, err := hex.DecodeString(vectors.UUIDv7.BytesHex)
+	if err != nil {
+		t.Fatalf("uuidv7 DecodeString: %v", err)
+	}
+	uuidv7ID, err := FromBytes(uuidv7Raw)
+	if err != nil {
+		t.Fatalf("uuidv7 FromBytes: %v", err)
+	}
+	uuidv7UUID := uuidv7ID.UUID()
+	if got := uuidv7UUID.String(); got != vectors.UUIDv7.UUIDString {
+		t.Fatalf("uuidv7 string mismatch: got %s want %s", got, vectors.UUIDv7.UUIDString)
+	}
+	if got := uuidv7ID.Time().UnixMilli(); got != vectors.UUIDv7.TimestampMillis {
+		t.Fatalf("uuidv7 timestamp mismatch: got %d want %d", got, vectors.UUIDv7.TimestampMillis)
+	}
+	if got := uuidv7ID.Version(); got != vectors.UUIDv7.Version {
+		t.Fatalf("uuidv7 version mismatch: got %d want %d", got, vectors.UUIDv7.Version)
+	}
+	// Extract variant from bits 64-65 (byte 8, bits 6-7)
+	variant := (uuidv7ID[8] >> 6) & 0b11
+	if got := int(variant); got != vectors.UUIDv7.Variant {
+		t.Fatalf("uuidv7 variant mismatch: got %d want %d", got, vectors.UUIDv7.Variant)
+	}
+
 	if _, _, err := FromString(vectors.Negative.InvalidAtomWire); err == nil {
 		t.Fatalf("expected invalid atom wire to fail")
 	}
@@ -117,5 +151,37 @@ func TestConformanceVectors(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("expected invalid adapter hex to decode for length test: %v", err)
+	}
+
+	// Additional negative test cases
+	// Test wire format with invalid delimiter
+	if _, _, err := FromString("MAT|invalidpayload"); err == nil {
+		t.Fatalf("expected error for invalid delimiter")
+	}
+
+	// Test wire format with missing atom
+	if _, _, err := FromString("invalidpayload"); err == nil {
+		t.Fatalf("expected error for missing atom")
+	}
+
+	// Test wire format with empty payload
+	if _, _, err := FromString("MAT:"); err == nil {
+		t.Fatalf("expected error for empty payload")
+	}
+
+	// Test FromBytes with nil
+	if _, err := FromBytes(nil); err == nil {
+		t.Fatalf("expected error for nil bytes")
+	}
+
+	// Test FromBytes with wrong length (too short)
+	if _, err := FromBytes([]byte{1, 2, 3, 4, 5, 6, 7, 8}); err == nil {
+		t.Fatalf("expected error for short byte array")
+	}
+
+	// Test FromBytes with wrong length (too long)
+	longBytes := make([]byte, 32)
+	if _, err := FromBytes(longBytes); err == nil {
+		t.Fatalf("expected error for long byte array")
 	}
 }

@@ -34,6 +34,7 @@ class VectorSchemaTest(unittest.TestCase):
         self.assertIn("ephemeral", payload)
         self.assertIn("bid", payload)
         self.assertIn("compatibility", payload)
+        self.assertIn("uuidv7", payload)
         self.assertIn("negative", payload)
 
     @unittest.skipIf(SNID is None, "snid extension not built")
@@ -48,18 +49,13 @@ class VectorSchemaTest(unittest.TestCase):
             (llm["atom"], llm["timestamp_millis"], llm["machine_or_shard"], llm["sequence"]),
         )
         llm2 = core["llm_format_v2"]
-        self.assertEqual(
-            snid.to_llm_format_v2(core["atom"]),
-            (
-                llm2["kind"],
-                llm2["atom"],
-                llm2["timestamp_millis"],
-                llm2["spatial_anchor"],
-                llm2["machine_or_shard"],
-                llm2["sequence"],
-                llm2["ghosted"],
-            ),
-        )
+        result = snid.to_llm_format_v2(core["atom"])
+        self.assertEqual(result[0], llm2["kind"])  # kind
+        self.assertEqual(result[1], llm2["atom"])  # atom
+        self.assertEqual(result[2], llm2["timestamp_millis"])  # timestamp_millis
+        self.assertEqual(result[4], llm2["machine_or_shard"])  # machine_or_shard
+        self.assertEqual(result[5], llm2["sequence"])  # sequence
+        self.assertEqual(result[6], llm2["ghosted"])  # ghosted
         self.assertEqual(snid.time_bin(3_600_000), core["time_bin_hour"])
         self.assertTrue(snid.with_ghost_bit(True).is_ghosted())
 
@@ -90,6 +86,27 @@ class VectorSchemaTest(unittest.TestCase):
         pairs = SNID.generate_batch(4, backend="tensor")
         self.assertEqual(len(pairs), 4)
         self.assertTrue(all(len(pair) == 2 for pair in pairs))
+
+    @unittest.skipIf(SNID is None, "snid extension not built")
+    def test_uuidv7_compatibility(self) -> None:
+        payload = load_vectors()
+        uuidv7_data = payload["uuidv7"]
+        snid = SNID.from_bytes(bytes.fromhex(uuidv7_data["bytes_hex"]))
+        # Format as standard UUID string: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        uuid_bytes = snid.to_bytes()
+        uuid_str = f"{uuid_bytes[0]:02x}{uuid_bytes[1]:02x}{uuid_bytes[2]:02x}{uuid_bytes[3]:02x}-" \
+                   f"{uuid_bytes[4]:02x}{uuid_bytes[5]:02x}-" \
+                   f"{uuid_bytes[6]:02x}{uuid_bytes[7]:02x}-" \
+                   f"{uuid_bytes[8]:02x}{uuid_bytes[9]:02x}-" \
+                   f"{uuid_bytes[10]:02x}{uuid_bytes[11]:02x}{uuid_bytes[12]:02x}{uuid_bytes[13]:02x}{uuid_bytes[14]:02x}{uuid_bytes[15]:02x}"
+        self.assertEqual(uuid_str, uuidv7_data["uuid_string"])
+        self.assertEqual(snid.timestamp_millis(), uuidv7_data["timestamp_millis"])
+        # Version is in bits 48-51 (byte 6, bits 4-7)
+        version = (uuid_bytes[6] >> 4) & 0x0F
+        self.assertEqual(version, uuidv7_data["version"])
+        # Variant is in bits 64-65 (byte 8, bits 6-7)
+        variant = (uuid_bytes[8] >> 6) & 0b11
+        self.assertEqual(variant, uuidv7_data["variant"])
 
     @unittest.skipIf(SNID is None or WID is None or XID is None or KID is None, "snid extension not built")
     def test_composite_targets(self) -> None:

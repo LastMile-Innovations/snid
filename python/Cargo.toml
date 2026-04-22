@@ -7,6 +7,10 @@ edition = "2021"
 name = "snid_native"
 crate-type = ["cdylib"]
 
+[features]
+default = ["data"]
+data = []
+
 [dependencies]
-pyo3 = { version = "0.23.3", features = ["extension-module"] }
-snid-core = { path = "../rust", features = ["data"] }
+pyo3 = { version = "0.28.3", features = ["extension-module"] }
+snid = { path = "../rust", features = ["data"] }

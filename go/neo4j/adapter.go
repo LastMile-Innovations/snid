@@ -3,7 +3,7 @@ package neo4j
 import (
 	"fmt"
 
-	snid "github.com/neighbor/snid/go"
+	snid "github.com/neighbor/snid"
 )
 
 // MarshalProperty converts a SNID into the canonical Neo4j binary property representation.

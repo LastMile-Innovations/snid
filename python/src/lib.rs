@@ -2,9 +2,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
-use snid_core::{Bid, Eid, Kid, Lid, Nid, Snid, Wid, Xid};
+use snid::{Bid, Eid, Kid, Lid, Nid, Snid, Wid, Xid};
 
-fn py_err(err: snid_core::Error) -> PyErr {
+fn py_err(err: snid::Error) -> PyErr {
     PyValueError::new_err(format!("{err:?}"))
 }
 
@@ -366,12 +366,12 @@ fn snid_native(_py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[pyfunction]
 fn encode_fixed64_pair<'py>(py: Python<'py>, hi: i64, lo: i64) -> Bound<'py, PyBytes> {
-    PyBytes::new(py, &snid_core::encode_fixed64_pair(hi, lo))
+    PyBytes::new(py, &snid::encode_fixed64_pair(hi, lo))
 }
 
 #[pyfunction]
 fn decode_fixed64_pair(raw: Vec<u8>) -> PyResult<(i64, i64)> {
-    snid_core::decode_fixed64_pair(&raw).map_err(py_err)
+    snid::decode_fixed64_pair(&raw).map_err(py_err)
 }
 
 #[pyfunction]

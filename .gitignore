@@ -22,3 +22,4 @@ build/
 conformance/vectors.json
 python/snid/snid_native*.so
 python/snid/snid_native*.dylib
+benchmarks/results/

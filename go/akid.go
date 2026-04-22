@@ -2,12 +2,31 @@ package snid
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"strings"
-
-	"github.com/mr-tron/base58"
 )
 
 const akidSecretBytes = 24
+
+// AKIDSecret represents a 24-byte AKID secret with constant-time verification.
+type AKIDSecret [akidSecretBytes]byte
+
+// NewAKIDSecret generates a new AKIDSecret using crypto/rand.
+func NewAKIDSecret() (AKIDSecret, error) {
+	var secret AKIDSecret
+	if _, err := rand.Read(secret[:]); err != nil {
+		return AKIDSecret{}, err
+	}
+	return secret, nil
+}
+
+// Verify performs constant-time comparison of the secret against input bytes.
+func (s AKIDSecret) Verify(input []byte) bool {
+	if len(input) != akidSecretBytes {
+		return false
+	}
+	return subtle.ConstantTimeCompare(s[:], input) == 1
+}
 
 // NewAKIDPublic returns a tenant-projected public SNID for AKID lookup and routing.
 func NewAKIDPublic(tenantID string) ID {
@@ -19,13 +38,18 @@ func EncodeAKIDSecret(secret []byte) string {
 	if len(secret) == 0 {
 		return ""
 	}
-	body := base58.Encode(secret)
+	body := encodeBase58Bytes(secret)
 	chk := base58Alphabet[crc8(secret)%58]
 	return body + string(chk)
 }
 
-// NewAKIDSecret returns a freshly generated 24-byte AKID secret string.
-func NewAKIDSecret() (string, error) {
+// EncodeAKIDSecretTyped returns the Base58 payload plus a CRC8-derived check character for AKIDSecret.
+func EncodeAKIDSecretTyped(secret AKIDSecret) string {
+	return EncodeAKIDSecret(secret[:])
+}
+
+// NewAKIDSecretString returns a freshly generated 24-byte AKID secret string.
+func NewAKIDSecretString() (string, error) {
 	raw := make([]byte, akidSecretBytes)
 	if _, err := rand.Read(raw); err != nil {
 		return "", err
@@ -41,7 +65,7 @@ func VerifyAKIDSecretChecksum(secret string) ([]byte, bool) {
 	}
 	body := secret[:len(secret)-1]
 	chk := secret[len(secret)-1]
-	decoded, err := base58.Decode(body)
+	decoded, err := decodeBase58Bytes(body)
 	if err != nil {
 		return nil, false
 	}
@@ -62,6 +86,7 @@ func ParseAKID(wire string) (publicID ID, secret string, err error) {
 	if len(parts) != 2 {
 		return Zero, "", ErrInvalidFormat
 	}
+	// Parse expects the full atom-prefixed string (e.g., KEY:payload)
 	atom, parseErr := publicID.Parse(parts[0])
 	if parseErr != nil {
 		return Zero, "", parseErr

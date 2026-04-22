@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestCoreWireRoundTrip(t *testing.T) {
@@ -171,5 +173,122 @@ func TestSpatialFeatureVector(t *testing.T) {
 	}
 	if features[len(features)-1] != uint64(sgid.H3Cell()) {
 		t.Fatalf("feature vector should end at source cell")
+	}
+}
+
+func TestUUIDv7Compatibility(t *testing.T) {
+	// Test NewUUIDv7 generates valid UUIDv7-compatible IDs
+	id := NewUUIDv7()
+	uuidStr := id.UUIDString()
+
+	// Verify UUID string format (8-4-4-4-12)
+	if len(uuidStr) != 36 {
+		t.Fatalf("unexpected UUID string length: got %d", len(uuidStr))
+	}
+
+	// Parse back from UUID string
+	parsed, err := ParseUUIDString(uuidStr)
+	if err != nil {
+		t.Fatalf("ParseUUIDString failed: %v", err)
+	}
+	if parsed != id {
+		t.Fatalf("parsed UUID doesn't match original: got %x want %x", parsed, id)
+	}
+
+	// Test NewUUIDv7WithTime for deterministic generation
+	ts := time.UnixMilli(1700000000123)
+	detID := NewUUIDv7WithTime(ts)
+	detID2 := NewUUIDv7WithTime(ts)
+	if detID != detID2 {
+		t.Fatalf("expected deterministic IDs to match for same timestamp")
+	}
+
+	// Verify version nibble is 0b0111 (version 7)
+	version := (detID[6] >> 4) & 0x0F
+	if version != 7 {
+		t.Fatalf("expected UUID version 7, got %d", version)
+	}
+
+	// Verify variant bits are 0b10
+	variant := (detID[8] >> 6) & 0b11
+	if variant != 0b10 {
+		t.Fatalf("expected UUID variant 0b10, got %b", variant)
+	}
+
+	// Test FromUUIDv7 rejects non-v7 UUIDs
+	var nonV7 uuid.UUID
+	copy(nonV7[:], detID[:])
+	nonV7[6] = (nonV7[6] & 0x0F) | (4 << 4) // Set version to 4
+	_, err = FromUUIDv7(nonV7)
+	if err == nil {
+		t.Fatalf("expected error for non-v7 UUID")
+	}
+
+	// Test ToUUIDv7 conversion
+	uuidObj := id.ToUUIDv7()
+	if uuidObj.String() != uuidStr {
+		t.Fatalf("ToUUIDv7 string mismatch")
+	}
+}
+
+func TestUUIDv7Monotonicity(t *testing.T) {
+	// Test that IDs generated in quick succession are monotonic
+	ids := make([]ID, 100)
+	for i := 0; i < 100; i++ {
+		ids[i] = NewUUIDv7()
+	}
+
+	// Verify each ID is greater than the previous
+	for i := 1; i < len(ids); i++ {
+		prev := ids[i-1]
+		curr := ids[i]
+		// Compare as byte arrays
+		for j := 0; j < 16; j++ {
+			if curr[j] > prev[j] {
+				break // curr is greater
+			}
+			if curr[j] < prev[j] {
+				t.Fatalf("IDs not monotonic: ids[%d] < ids[%d-1] at byte %d", i, i, j)
+			}
+		}
+	}
+
+	// Test monotonicity within same millisecond
+	// Generate IDs rapidly to force same millisecond
+	fastIDs := make([]ID, 50)
+	for i := 0; i < 50; i++ {
+		fastIDs[i] = NewUUIDv7()
+	}
+
+	// Verify monotonic even when timestamps may be same
+	for i := 1; i < len(fastIDs); i++ {
+		for j := 0; j < 16; j++ {
+			if fastIDs[i][j] > fastIDs[i-1][j] {
+				break
+			}
+			if fastIDs[i][j] < fastIDs[i-1][j] {
+				t.Fatalf("Fast IDs not monotonic: fastIDs[%d] < fastIDs[%d-1] at byte %d", i, i, j)
+			}
+		}
+	}
+
+	// Test sequence overflow handling
+	// Generate deterministic IDs with same timestamp to test sequence
+	ts := time.UnixMilli(1700000000123)
+	detIDs := make([]ID, 5000)
+	for i := 0; i < 5000; i++ {
+		detIDs[i] = NewUUIDv7WithTime(ts)
+	}
+
+	// Verify all are monotonic
+	for i := 1; i < len(detIDs); i++ {
+		for j := 0; j < 16; j++ {
+			if detIDs[i][j] > detIDs[i-1][j] {
+				break
+			}
+			if detIDs[i][j] < detIDs[i-1][j] {
+				t.Fatalf("Deterministic IDs not monotonic at index %d, byte %d", i, j)
+			}
+		}
 	}
 }

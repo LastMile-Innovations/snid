@@ -388,3 +388,108 @@ func bytesToString(b []byte) string {
 func stringToBytes(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
+
+// encodeBase58Bytes encodes arbitrary bytes as canonical Bitcoin-style Base58.
+// It is used for non-SNID payloads such as short IDs and AKID secrets. The
+// 16-byte SNID wire path remains specialized in appendPayload.
+func encodeBase58Bytes(src []byte) string {
+	if len(src) == 0 {
+		return ""
+	}
+
+	zeros := 0
+	for zeros < len(src) && src[zeros] == 0 {
+		zeros++
+	}
+
+	var scratchStack [64]byte
+	scratch := scratchStack[:]
+	if len(src) > len(scratchStack) {
+		scratch = make([]byte, len(src))
+	} else {
+		scratch = scratch[:len(src)]
+	}
+	copy(scratch, src)
+
+	maxEncoded := len(src)*138/100 + 2
+	var encodedStack [96]byte
+	encoded := encodedStack[:]
+	if maxEncoded > len(encodedStack) {
+		encoded = make([]byte, maxEncoded)
+	} else {
+		encoded = encoded[:maxEncoded]
+	}
+	idx := len(encoded)
+
+	for start := zeros; start < len(scratch); {
+		var carry uint32
+		for i := start; i < len(scratch); i++ {
+			val := (carry << 8) | uint32(scratch[i])
+			scratch[i] = byte(val / 58)
+			carry = val % 58
+		}
+		idx--
+		encoded[idx] = base58Alphabet[carry]
+		for start < len(scratch) && scratch[start] == 0 {
+			start++
+		}
+	}
+
+	for i := 0; i < zeros; i++ {
+		idx--
+		encoded[idx] = '1'
+	}
+
+	return string(encoded[idx:])
+}
+
+// decodeBase58Bytes decodes base58 string to bytes without checksum validation.
+func decodeBase58Bytes(s string) ([]byte, error) {
+	if len(s) == 0 {
+		return nil, nil
+	}
+
+	leadingOnes := 0
+	for i := 0; i < len(s) && s[i] == '1'; i++ {
+		leadingOnes++
+	}
+
+	maxDecoded := len(s)*733/1000 + 1
+	var decodedStack [64]byte
+	decoded := decodedStack[:]
+	if maxDecoded > len(decodedStack) {
+		decoded = make([]byte, maxDecoded)
+	} else {
+		decoded = decoded[:maxDecoded]
+	}
+
+	length := 0
+	for i := leadingOnes; i < len(s); i++ {
+		c := s[i]
+		val := b58Map[c]
+		if val == -1 {
+			return nil, errors.New("snid: invalid char")
+		}
+		carry := int(val)
+		j := 0
+		for k := len(decoded) - 1; (carry != 0 || j < length) && k >= 0; k-- {
+			carry += int(decoded[k]) * 58
+			decoded[k] = byte(carry)
+			carry >>= 8
+			j++
+		}
+		if carry != 0 {
+			return nil, errors.New("snid: overflow")
+		}
+		length = j
+	}
+
+	start := len(decoded) - length
+	for start < len(decoded) && decoded[start] == 0 {
+		start++
+	}
+
+	out := make([]byte, leadingOnes+len(decoded)-start)
+	copy(out[leadingOnes:], decoded[start:])
+	return out, nil
+}

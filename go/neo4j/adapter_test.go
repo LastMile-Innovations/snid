@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	snid "github.com/neighbor/snid/go"
+	snid "github.com/neighbor/snid"
 )
 
 func TestMarshalUnmarshalBinaryProperty(t *testing.T) {

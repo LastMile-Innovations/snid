@@ -1,0 +1,110 @@
+name: Ecosystem Benchmarks
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+  workflow_dispatch:  # Allow manual trigger
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'benchmarks/ecosystem_comparison.py'
+      - 'benchmarks/go/**'
+      - 'rust/benches/ecosystem_benchmarks.rs'
+      - 'benchmarks/python_ecosystem_bench.py'
+
+jobs:
+  ecosystem:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Go ecosystem dependencies
+        run: |
+          cd benchmarks/go
+          go mod download
+
+      - name: Install Rust ecosystem dependencies
+        run: |
+          cd rust
+          cargo fetch
+
+      - name: Install Python dependencies
+        run: |
+          cd python
+          pip install maturin[patchelf]
+          maturin develop
+          pip install pytest pytest-benchmark
+          pip install -e ".[ecosystem]"
+
+      - name: Run ecosystem benchmarks
+        run: |
+          python benchmarks/ecosystem_comparison.py
+
+      - name: Upload ecosystem results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecosystem-results
+          path: benchmarks/results/ecosystem_*.json
+          retention-days: 90
+
+      - name: Upload ecosystem report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecosystem-report
+          path: benchmarks/results/ecosystem_*.md
+          retention-days: 90
+
+      - name: Comment on PR (if triggered by PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            
+            let comment = '## 🌍 Ecosystem Benchmark Results\n\n';
+            comment += 'Benchmarks completed successfully. ';
+            comment += 'Check the artifacts for detailed results.\n\n';
+            
+            // Try to find and summarize results
+            try {
+              const resultFiles = glob.sync('benchmarks/results/ecosystem_*.json');
+              if (resultFiles.length > 0) {
+                const data = JSON.parse(fs.readFileSync(resultFiles[0], 'utf8'));
+                comment += '### Summary\n\n';
+                comment += `- Go: ${data.languages.go.returncode === 0 ? '✅' : '❌'}\n`;
+                comment += `- Rust: ${data.languages.rust.returncode === 0 ? '✅' : '❌'}\n`;
+                comment += `- Python: ${data.languages.python.returncode === 0 ? '✅' : '❌'}\n`;
+                comment += `\nTotal packages benchmarked: `;
+                const total = Object.keys(data.languages.go.benchmarks).length +
+                             Object.keys(data.languages.rust.benchmarks).length +
+                             Object.keys(data.languages.python.benchmarks).length;
+                comment += `${total}\n`;
+              }
+            } catch (e) {
+              comment += 'Could not parse results.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo,
+              body: comment
+            });
