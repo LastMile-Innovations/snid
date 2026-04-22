@@ -47,7 +47,7 @@ jobs:
           python benchmarks/performance_benchmark.py
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmarks/results/*.json
@@ -58,7 +58,7 @@ jobs:
           python benchmarks/report_generator.py
 
       - name: Upload HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-report
           path: benchmarks/results/*.html
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload regression report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: regression-report
           path: benchmarks/results/regression_*.json
@@ -140,7 +140,7 @@ jobs:
           python benchmarks/comparison_benchmark.py
 
       - name: Upload comparison results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: comparison-results
           path: benchmarks/results/comparison_*.json

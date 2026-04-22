@@ -58,14 +58,14 @@ jobs:
           python benchmarks/ecosystem_comparison.py
 
       - name: Upload ecosystem results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ecosystem-results
           path: benchmarks/results/ecosystem_*.json
           retention-days: 90
 
       - name: Upload ecosystem report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ecosystem-report
           path: benchmarks/results/ecosystem_*.md

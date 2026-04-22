@@ -38,7 +38,7 @@ jobs:
           go test -bench=BenchmarkSGID -bench=BenchmarkNID -bench=BenchmarkLID -bench=BenchmarkBID -bench=BenchmarkEID -benchmem -run=^$ ./... > ../benchmarks/results/extended-go-bench.txt
 
       - name: Upload Go results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extended-go-benchmarks
           path: benchmarks/results/extended-go-bench.txt
@@ -76,7 +76,7 @@ jobs:
           PY
 
       - name: Upload Rust results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extended-rust-benchmarks
           path: benchmarks/results/extended-rust-bench.json
@@ -108,7 +108,7 @@ jobs:
         run: pytest tests/test_extended_bench.py --benchmark-json ../benchmarks/results/extended-python-bench.json
 
       - name: Upload Python results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extended-python-benchmarks
           path: benchmarks/results/extended-python-bench.json

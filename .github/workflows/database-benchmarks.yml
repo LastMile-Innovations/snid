@@ -47,7 +47,7 @@ jobs:
           go run main.go --benchmark network-overhead
 
       - name: Upload database results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: database-benchmark-results
           path: benchmarks/results/*.json
