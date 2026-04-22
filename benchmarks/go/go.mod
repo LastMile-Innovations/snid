@@ -1,6 +1,6 @@
 module github.com/LastMile-Innovations/snid/benchmarks/go
 
-go 1.25.0
+go 1.25
 
 require (
 	github.com/bwmarrin/snowflake v0.3.0

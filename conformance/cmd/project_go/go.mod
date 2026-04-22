@@ -1,6 +1,6 @@
 module github.com/LastMile-Innovations/snid/conformance/project-go
 
-go 1.25.0
+go 1.25
 
 require github.com/LastMile-Innovations/snid/go v0.0.0
 

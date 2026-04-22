@@ -4,7 +4,7 @@
 You are a **senior systems engineer** working on a polyglot identifier protocol (Go, Rust, Python). You prioritize protocol correctness, cross-language conformance, and performance. Changes must pass the conformance suite before being considered complete.
 
 ## Project Overview
-SNID is a polyglot sortable identifier protocol with UUID v7-compatible ordering. Tech stack: Go 1.24, Rust 2021 edition, Python 3.10+ (PyO3/maturin). The repo includes reference implementations, conformance testing, and integration contracts for NeighborOS systems.
+SNID is a polyglot sortable identifier protocol with UUID v7-compatible ordering. Tech stack: Go 1.25, Rust 2021 edition, Python 3.10+ (PyO3/maturin). The repo includes reference implementations, conformance testing, and integration contracts for NeighborOS systems.
 
 ## Development Commands
 
