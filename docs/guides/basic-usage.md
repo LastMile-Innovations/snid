@@ -1,27 +1,48 @@
 # Basic Usage Guide
 
-Common patterns and examples for using SNID in your applications.
+Common patterns and examples for using SNID in your applications (API V2 - Universal Paradigms).
 
 ## Generating IDs
 
-### Single ID Generation
+### Single ID Generation (Universal Paradigm)
 
 **Go:**
 ```go
-id := snid.NewFast()
+id := snid.New()  // Fastest path, ~3.7ns
 ```
 
 **Rust:**
 ```rust
-let id = SNID::new();
+let id = Snid::new();  // Fastest path, ~5ns
 ```
 
 **Python:**
 ```python
-id = snid.SNID.new_fast()
+id = snid.new()  # Fastest path, ~15ns
 ```
 
-### Batch Generation
+### Configured ID Generation
+
+**Go:**
+```go
+id := snid.NewWith(snid.Options{Tenant: "acme", Shard: 42})
+```
+
+**Rust:**
+```rust
+let opts = snid::Options {
+    tenant: Some("acme".to_string()),
+    shard: Some(42),
+};
+let id = Snid::new_with(opts);
+```
+
+**Python:**
+```python
+id = snid.new_with(tenant="acme", shard=42)
+```
+
+### Batch Generation (Universal Paradigm)
 
 **Go:**
 ```go
@@ -30,63 +51,113 @@ batch := snid.NewBatch(snid.Matter, 1000)
 
 **Rust:**
 ```rust
-let batch = SNID::generate_batch(1000);
+let batch = Snid::batch(1000);
 ```
 
 **Python:**
 ```python
-# Raw bytes (fastest)
-batch = snid.SNID.generate_batch(1000, backend="bytes")
+# Python objects (default)
+batch = snid.batch(1000, backend="snid")
 
-# Tensor pairs
-batch = snid.SNID.generate_batch(1000, backend="tensor")
+# Raw bytes (fastest)
+batch = snid.batch(1000, backend="bytes")
 
 # NumPy arrays (requires snid[data])
-batch = snid.SNID.generate_batch(1000, backend="numpy")
+batch = snid.batch(1000, backend="numpy")
 ```
+
+### Public-Safe Mode Generation
+
+For public-facing applications where you want to prevent ID enumeration and timestamp leakage:
+
+**Go:**
+```go
+id := snid.NewSafe()  // ~40-50ns, time-blurred + CSPRNG entropy
+```
+
+**Rust:**
+```rust
+let id = Snid::new_safe();  // ~40-50ns, time-blurred + CSPRNG entropy
+```
+
+**Python:**
+```python
+id = snid.new_safe()  # ~40-50ns, time-blurred + CSPRNG entropy
+```
+
+This mode:
+- Truncates timestamp to nearest second (time-blurring)
+- Fills 74 bits with cryptographic randomness (no monotonic counter)
+- Produces IDs safe for public APIs and URLs
+- Slightly slower than standard generation but still essentially instant
 
 ## Wire Format
 
-### Encoding to Wire String
+### Encoding to Wire String (Universal Paradigm)
 
 **Go:**
 ```go
-wire := id.String(snid.Matter)
-// MAT:...
+wire := id.StringDefault()  // Default: "MAT:..."
+wire = id.WithAtom(snid.Identity)  // Override: "IAM:..."
 ```
 
 **Rust:**
 ```rust
-let wire = id.to_wire("MAT");
-// MAT:...
+let wire = id.to_string();  // Default: "MAT:..."
+let wire = id.with_atom("IAM");  // Override: "IAM:..."
 ```
 
 **Python:**
 ```python
-wire = id.to_wire("MAT")
-# MAT:...
+wire = id.string_default()  # Default: "MAT:..."
+wire = id.with_atom("IAM")  # Override: "IAM:..."
 ```
 
-### Parsing from Wire String
+### Crockford Base32 Encoding
+
+For human-readable, case-insensitive IDs suitable for URLs and manual entry:
 
 **Go:**
 ```go
-parsed, atom, err := snid.FromString(wire)
+base32 := id.StringBase32()  // Crockford Base32 (26 chars)
 ```
 
 **Rust:**
 ```rust
-let (parsed, atom) = SNID::parse_wire(&wire)?;
+let base32 = id.to_base32();  // Crockford Base32 (26 chars)
 ```
 
 **Python:**
 ```python
-parsed, atom = snid.SNID.parse_wire(wire)
+base32 = id.to_base32()  # Crockford Base32 (26 chars)
+```
+
+Crockford Base32 features:
+- Case-insensitive (A and a are the same)
+- Excludes ambiguous characters (I, L, O to prevent confusion with 1 and 0)
+- URL-safe and suitable for human-readable IDs
+- Includes check digit for integrity validation
+
+### Parsing from Wire String (Universal Paradigm)
+
+**Go:**
+```go
+parsed, err := snid.Parse(wire)
+```
+
+**Rust:**
+```rust
+let parsed = Snid::parse(&wire)?;
+```
+
+**Python:**
+```python
+parsed = snid.parse(wire)
 ```
 
 ## Atoms
 
-Atoms are type-tags applied at serialization time. Common atoms:
+Atoms are type-tags applied at serialization time (decoupled from construction). Common atoms:
 
 - `MAT` - Matter/objects
 - `IAM` - Identity/users
@@ -99,23 +170,23 @@ Atoms are type-tags applied at serialization time. Common atoms:
 
 **Go:**
 ```go
-id.String(snid.Matter)
-id.String(snid.Identity)
-id.String(snid.Location)
+id.WithAtom(snid.Matter)
+id.WithAtom(snid.Identity)
+id.WithAtom(snid.Location)
 ```
 
 **Rust:**
 ```rust
-id.to_wire("MAT")
-id.to_wire("IAM")
-id.to_wire("LOC")
+id.with_atom("MAT")
+id.with_atom("IAM")
+id.with_atom("LOC")
 ```
 
 **Python:**
 ```python
-id.to_wire("MAT")
-id.to_wire("IAM")
-id.to_wire("LOC")
+id.with_atom("MAT")
+id.with_atom("IAM")
+id.with_atom("LOC")
 ```
 
 ## Binary Storage
@@ -166,17 +237,17 @@ uuid := id.UUID()
 
 **Rust:**
 ```rust
-let uuid = id.to_uuid();
+let uuid = id.to_uuid_string();
 ```
 
 **Python:**
 ```python
-uuid = id.to_uuid()
+uuid = id.to_uuid_string()
 ```
 
 ## Extended Identifier Families
 
-### Spatial IDs (SGID)
+### Spatial IDs (Universal Paradigm)
 
 **Go:**
 ```go
@@ -185,12 +256,12 @@ sgid := snid.NewSpatial(37.7749, -122.4194) // San Francisco
 
 **Rust:**
 ```rust
-let sgid = SGID::from_spatial_parts(h3_cell, entropy);
+let sgid = Snid::new_spatial(37.7749, -122.4194);
 ```
 
 **Python:**
 ```python
-sgid = snid.SGID.from_spatial_parts(h3_cell, entropy)
+sgid = snid.new_spatial(37.7749, -122.4194)
 ```
 
 ### Neural IDs (NID)
@@ -254,11 +325,11 @@ CREATE (n:Item {id: $binary_id, name: $name})
 
 See [Storage Contracts](storage-contracts.md) for more details.
 
-## Error Handling
+## Error Handling (Universal Paradigm)
 
 **Go:**
 ```go
-id, atom, err := snid.FromString(wire)
+id, err := snid.Parse(wire)
 if err != nil {
     // Handle error
 }
@@ -266,13 +337,13 @@ if err != nil {
 
 **Rust:**
 ```rust
-let (id, atom) = SNID::parse_wire(&wire)?;
+let id = Snid::parse(&wire)?;
 ```
 
 **Python:**
 ```python
 try:
-    parsed, atom = snid.SNID.parse_wire(wire)
+    parsed = snid.parse(wire)
 except ValueError as e:
     # Handle error
 ```

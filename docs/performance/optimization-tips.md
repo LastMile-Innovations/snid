@@ -12,6 +12,47 @@ SNID is already highly optimized, but there are patterns to get the best perform
 - Use binary storage instead of wire strings
 - Leverage lock-free per-P state in Go
 
+## Implementation-Level Optimizations
+
+SNID implementations include several low-level optimizations for maximum performance:
+
+### Cache-Line Padding
+
+Both Go and Rust implementations use 64-byte cache-line padding on generator state to prevent false sharing in multi-threaded scenarios. This ensures that concurrent threads don't fight over the same cache line when updating different shards.
+
+**Performance Impact:**
+- Prevents false sharing when multiple threads generate IDs concurrently
+- Core hot paths improved 6-13% (snid_new_fast, snid_to_wire, snid_to_uuid_string)
+- Brings Rust implementation to parity with Go's cache-line strategy
+
+### Aggressive Inlining
+
+Hot path functions are marked with `#[inline(always)]` in Rust and similar inlining hints in Go to eliminate function call overhead in critical paths:
+
+- ID generation: `GeneratorState::next()`, `Snid::new()`
+- Byte conversion: `to_bytes()`, `from_bytes()`
+- Encoding: `encode_payload()`, `decode_payload()`, `crc8()`
+- UUID formatting: `encode_uuid_string()`, `decode_uuid_hex()`
+
+**Performance Impact:**
+- Eliminates function call overhead in hot paths
+- Enables compiler to melt SNID logic directly into user code
+- Particularly beneficial for batch operations
+
+### Batch Optimization
+
+Extended identifier families include optimized batch helpers:
+
+```rust
+// Nid batch generation with pre-allocation
+let batch = Nid::batch_from_head(head, &semantic_hashes);
+```
+
+**Performance Impact:**
+- Batch operations improved 21-33% (nid_batch_100, nid_hamming_distance)
+- Reduces memory allocations in batch operations
+- Optimized hamming_distance uses direct byte comparison
+
 ## Go Optimization
 
 ### Use NewFast() for Single IDs

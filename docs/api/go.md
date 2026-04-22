@@ -1,6 +1,6 @@
 # Go API Reference
 
-Go implementation API reference.
+Go implementation API reference (API V2 - Universal Paradigms).
 
 ## Package
 
@@ -8,19 +8,73 @@ Go implementation API reference.
 import "github.com/LastMile-Innovations/snid"
 ```
 
+## Core Philosophy
+
+**"One Default, Infinite Extensibility"**
+
+- **Decoupled Presentation**: Atoms are strictly a serialization concern
+- **Strict Memory Tiers**: 16-byte (ID) and 32-byte (NID, LID, KID)
+- **Zero-Allocation Hot Paths**: No heap allocations in generation
+- **Universal Paradigms**: Consistent patterns across all languages
+
+## Universal Paradigms
+
+### Generation
+
+```go
+id := snid.New()                    // Fastest path, ~3.7ns
+id = snid.NewWith(snid.Options{Tenant: "acme", Shard: 42})
+id = snid.NewSpatial(lat, lng)      // Spatial IDs
+id = snid.NewSafe()                 // Public-safe mode with time-blurring and CSPRNG entropy (~40-50ns)
+```
+
+### Batching
+
+```go
+batch := snid.NewBatch(snid.Matter, 1000)  // Pre-allocates and fills
+```
+
+### Parsing
+
+```go
+id, err := snid.Parse("MAT:2xXFhP...")       // Parse wire string
+id, err := snid.ParseUUIDString("018f1c3e-...")  // Parse UUID
+```
+
+### Serialization
+
+```go
+wire := id.StringDefault()     // Default: "MAT:"
+wire := id.WithAtom("IAM")     // Override: "IAM:"
+uuid := id.UUIDString()        // UUIDv7 format
+base32 := id.StringBase32()    // Crockford Base32 (case-insensitive, human-friendly)
+```
+
 ## Types
 
 ### ID
 
-Core 128-bit identifier type.
+Core 128-bit identifier type (Tier 1: 16-byte).
 
 ```go
 type ID [16]byte
 ```
 
+### Options
+
+Configuration for ID generation with zero-allocation (pass by value).
+
+```go
+type Options struct {
+    Tenant string
+    Shard  uint16
+    Time   time.Time
+}
+```
+
 ### Atom
 
-Atom type for wire format prefixes.
+Atom type for wire format prefixes (serialization-time only).
 
 ```go
 type Atom string
@@ -44,43 +98,27 @@ const (
 )
 ```
 
-## Functions
+## Functions (Universal Paradigms)
 
 ### New
 
-Generate a new SNID using NewFast().
+Generate a new SNID with ~3.7ns latency. This is the universal paradigm for fast ID generation.
 
 ```go
-func New(atom Atom) ID
+func New() ID
 ```
 
-### NewFast
+### NewWith
 
-Generate a new SNID with lock-free per-P state. Current local Go artifact: 4.106ns, 0 allocs.
-
-```go
-func NewFast() ID
-```
-
-### NewProjected
-
-Generate a new SNID with tenant and shard.
+Generate a configured ID using stack-allocated options. Zero-allocation.
 
 ```go
-func NewProjected(tenantID string, shard uint16) ID
-```
-
-### NewBatch
-
-Generate a batch of SNIDs.
-
-```go
-func NewBatch(atom Atom, count int) []ID
+func NewWith(opts Options) ID
 ```
 
 ### NewSpatial
 
-Generate a spatial ID (SGID) from lat/lng.
+Generate a spatial ID from lat/lng. Spatial IDs are 16-byte IDs with H3 encoding.
 
 ```go
 func NewSpatial(lat, lng float64) ID
@@ -92,6 +130,56 @@ Generate a spatial ID with specific H3 resolution.
 
 ```go
 func NewSpatialPrecise(lat, lng float64, resolution int) ID
+```
+
+### NewSafe
+
+Generate a public-safe ID with time-blurring and pure CSPRNG entropy. This is the "One ID" solution for database PK + public API use. Time-blurring truncates timestamp to nearest second (instead of millisecond). Pure CSPRNG fills 74 bits with cryptographic randomness (no monotonic counter). Performance: ~40-50ns (vs 3.7ns for New).
+
+```go
+func NewSafe() ID
+```
+
+### Parse
+
+Parse a wire string and return the ID. Universal paradigm for parsing.
+
+```go
+func Parse(s string) (ID, error)
+```
+
+### ParseUUIDString
+
+Parse a UUID string and return the ID.
+
+```go
+func ParseUUIDString(s string) (ID, error)
+```
+
+## Functions (Legacy - Deprecated)
+
+### NewFast
+
+Generate a new SNID with lock-free per-P state. Deprecated: Use New() instead.
+
+```go
+func NewFast() ID
+```
+
+### NewProjected
+
+Generate a new SNID with tenant and shard. Deprecated: Use NewWith() instead.
+
+```go
+func NewProjected(tenantID string, shard uint16) ID
+```
+
+### NewBatch
+
+Generate a batch of SNIDs. Deprecated: Use NewBatch() with atom parameter ignored.
+
+```go
+func NewBatch(atom Atom, count int) []ID
 ```
 
 ### NewAsset
@@ -120,10 +208,10 @@ func FromString(s string) (ID, Atom, error)
 
 ### FromUUID
 
-Convert a UUID to an ID.
+Convert SNID's dependency-free UUID value to an ID.
 
 ```go
-func FromUUID(u uuid.UUID) ID
+func FromUUID(u UUID) ID
 ```
 
 ## Methods
@@ -136,6 +224,14 @@ Format ID as wire string with atom.
 func (id ID) String(atom Atom) string
 ```
 
+### StringBase32
+
+Format ID using Crockford Base32 encoding. This is case-insensitive and excludes ambiguous characters (I, L, O). Suitable for human-readable IDs and URLs.
+
+```go
+func (id ID) StringBase32() string
+```
+
 ### StringCompact
 
 Format ID as compact wire string (no atom).
@@ -146,10 +242,10 @@ func (id ID) StringCompact() string
 
 ### UUID
 
-Convert ID to UUID.
+Convert ID to SNID's dependency-free UUID value.
 
 ```go
-func (id ID) UUID() uuid.UUID
+func (id ID) UUID() UUID
 ```
 
 ### Tensor128

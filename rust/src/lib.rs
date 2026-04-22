@@ -39,29 +39,29 @@
 //! For protocol specification, see <https://github.com/LastMile-Innovations/snid/blob/main/docs/SPEC.md>
 
 // Module declarations
-mod core;
-mod generator;
-mod encoding;
-mod error;
-mod helpers;
-mod types;
-mod projections;
-mod spatial;
-mod neural;
-mod ledger;
-mod capability;
 mod akid;
-mod routing;
+mod capability;
 mod compact;
 mod conformance;
+mod core;
+mod encoding;
+mod error;
+mod generator;
+mod helpers;
+mod ledger;
+mod neural;
+mod projections;
+mod routing;
+mod spatial;
+mod types;
 
 // Public re-exports
-pub use core::Snid;
-pub use error::Error;
-pub use types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
 pub use akid::Akid;
-pub use routing::{AliasId, GrantId, ScopeId, ShardId};
 pub use compact::{ShortId, TraceId};
-pub use encoding::{encode_fixed64_pair, decode_fixed64_pair};
 #[cfg(feature = "data")]
 pub use conformance::VectorFile;
+pub use core::Snid;
+pub use encoding::{decode_fixed64_pair, encode_fixed64_pair};
+pub use error::Error;
+pub use routing::{AliasId, GrantId, ScopeId, ShardId};
+pub use types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};

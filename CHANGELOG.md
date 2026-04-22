@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+- **Rust**: Added cache-line padding to GeneratorState (64-byte front/back padding) to prevent false sharing in multi-threaded ID generation
+- **Rust**: Added aggressive `#[inline(always)]` annotations to hot path functions in generator, core, and encoding modules
+- **Rust**: Optimized `Nid::hamming_distance` to use direct byte comparison instead of allocations (25% improvement)
+- **Rust**: Added `Nid::batch_from_head` helper for efficient batch generation with pre-allocation
+- **Result**: Core hot paths improved 6-13% (snid_new_fast, snid_to_wire, snid_to_uuid_string)
+- **Result**: Batch operations improved 21-33% (nid_batch_100, nid_hamming_distance)
+- **Result**: Brings Rust implementation to parity with Go's cache-line strategy
+
+### Changed
+- **Rust**: GeneratorState struct now includes `_pad_front` and `_pad_back` fields for cache-line isolation
+- **Rust**: Hot path functions marked with `#[inline(always)]` for zero-cost abstraction
+
 ## [0.2.0] - 2026-04-21
 
 ### Added

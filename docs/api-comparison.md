@@ -8,7 +8,7 @@ Comparison of SNID's API against 2026 best practices for ID packages, integrated
 |--------------------|-------------------|-----------------------|------------------------|---------------|-------------------------|--------------------|----------|---------------------------|--------------------|---------------------|
 | **nanoid** (JS/TS) | `nanoid()` | **10** | String-only | Extremely high (customAlphabet, length) | No built-in | **118 bytes**, 0 deps | No | Basic | Excellent | **10** |
 | **uuid** (JS/TS) | `v7()` or `v4()` | **9.5** | Excellent (Uint8Array + string) | High (options object) | Yes (v7 monotonic) | ~2 KB, 0 deps | Yes | Excellent | Excellent | **9.5** |
-| **google/uuid** (Go) | `uuid.NewV7()` | **9** | Excellent | Medium | Yes (v7) | Zero deps | No | Excellent | Excellent | **9** |
+| **UUIDv7 libraries** (Go) | `NewV7()` | **9** | Excellent | Medium | Yes (v7) | Varies | Varies | Excellent | Excellent | **9** |
 | **cuid2** (JS) | `createId()` | **9** | String-only | Medium | Yes | Small, 0 deps | No | Good | Good | **9** |
 | **SNID** (Go) | `NewFast()` | **8.5** | Excellent (native `[16]byte` + wire/hex) | High (projected, batch, extended families) | Excellent (lock-free per-P) | Zero deps | No (planned) | Good | Good (godoc) | **8.5** |
 | **SNID** (Rust) | `Snid::new_fast()` | **8.5** | Excellent (`[u8; 16]` + wire) | High | Excellent | Zero runtime deps | No (planned) | Excellent | Good (rustdoc) | **8.5** |
@@ -233,7 +233,7 @@ def new_uuidv7() -> SNID:
 |---------|-------------------|----------------|
 | **NanoID (JS)** | 10 | SNID is more complex (extended families), but faster |
 | **uuid (JS)** | 9.5 | SNID matches simplicity for basic use, adds extended families |
-| **uuid (Go)** | 9 | SNID's `NewFast()` is comparable to `uuid.NewV7()` |
+| **UUIDv7 libraries (Go)** | 9 | SNID's `NewUUIDv7()` is self-contained and dependency-free |
 | **uuid (Rust)** | 9 | SNID's `new_fast()` is comparable to `Uuid::new_v7()` |
 | **uuid (Python)** | 9 | SNID requires build step, but offers more features |
 

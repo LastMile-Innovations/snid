@@ -9,6 +9,14 @@ fn bench_snid_new_fast(c: &mut Criterion) {
         });
 }
 
+fn bench_snid_new_safe(c: &mut Criterion) {
+    c.benchmark_group("snid_new_safe")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_new_safe", |b| {
+            b.iter(|| black_box(Snid::new_safe()));
+        });
+}
+
 fn bench_snid_to_wire(c: &mut Criterion) {
     let id = Snid::new_fast();
     c.benchmark_group("snid_to_wire_mat")
@@ -58,23 +66,24 @@ fn bench_lid_from_parts(c: &mut Criterion) {
         });
 }
 
-fn bench_snid_tensor_batch(c: &mut Criterion) {
-    // TODO: Re-enable when generate_tensor_batch_be_bytes is implemented
-    // c.benchmark_group("snid_generate_tensor_batch_be_bytes_100k")
-    //     .throughput(Throughput::Elements(100_000))
-    //     .bench_function("snid_generate_tensor_batch_be_bytes_100k", |b| {
-    //         b.iter(|| black_box(Snid::generate_tensor_batch_be_bytes(100_000)));
-    //     });
+fn bench_snid_to_uuid_string(c: &mut Criterion) {
+    let id = Snid::new_fast();
+    c.benchmark_group("snid_to_uuid_string")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_to_uuid_string", |b| {
+            b.iter(|| black_box(id.to_uuid_string()));
+        });
 }
 
 criterion_group!(
     benches,
     bench_snid_new_fast,
+    bench_snid_new_safe,
     bench_snid_to_wire,
     bench_nid_hamming,
     bench_bid_wire,
     bench_eid_from_parts,
-    bench_lid_from_parts
-    // bench_snid_tensor_batch
+    bench_lid_from_parts,
+    bench_snid_to_uuid_string
 );
 criterion_main!(benches);

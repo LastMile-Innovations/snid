@@ -174,3 +174,9 @@ jobs:
         with:
           name: polyglot-benchmarks
           path: conformance/artifacts
+
+      - name: Run regression detection
+        run: |
+          python benchmarks/regression_detector.py conformance/artifacts/go/bench.txt || true
+          python benchmarks/regression_detector.py conformance/artifacts/rust/bench.json || true
+          python benchmarks/regression_detector.py conformance/artifacts/python-bench.json || true

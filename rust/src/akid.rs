@@ -47,10 +47,16 @@ impl Akid {
         let bytes = encoded.as_bytes();
         let checksum_byte = bytes[bytes.len() - 1];
         let alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-        let checksum_pos = alphabet.iter().position(|&c| c == checksum_byte).ok_or(Error::InvalidPayload)?;
+        let checksum_pos = alphabet
+            .iter()
+            .position(|&c| c == checksum_byte)
+            .ok_or(Error::InvalidPayload)?;
         let mut hash: u32 = 2166136261;
         for &byte in &bytes[..bytes.len() - 1] {
-            let pos = alphabet.iter().position(|&c| c == byte).ok_or(Error::InvalidPayload)? as u32;
+            let pos = alphabet
+                .iter()
+                .position(|&c| c == byte)
+                .ok_or(Error::InvalidPayload)? as u32;
             hash ^= pos;
             hash = hash.wrapping_mul(16777619);
         }
@@ -74,13 +80,25 @@ impl Akid {
             return Err(Error::InvalidAtom);
         }
         Self::verify_secret_checksum(parts[1])?;
-        Ok((Self {
-            public,
-            secret: parts[1].to_string(),
-        }, atom))
+        Ok((
+            Self {
+                public,
+                secret: parts[1].to_string(),
+            },
+            atom,
+        ))
     }
 
     pub fn format(public: Snid, secret: &str) -> String {
-        format!("KEY:{}_{}", public.to_wire("MAT").unwrap().split(':').nth(1).unwrap_or(""), secret.trim())
+        format!(
+            "KEY:{}_{}",
+            public
+                .to_wire("MAT")
+                .unwrap()
+                .split(':')
+                .nth(1)
+                .unwrap_or(""),
+            secret.trim()
+        )
     }
 }

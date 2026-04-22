@@ -86,7 +86,7 @@ The SNID byte layout maps to UUIDv7 as follows:
 ### Implementation Requirements
 
 All implementations must:
-1. Provide `NewUUIDv7()` / `GenerateV7()` functions that produce RFC 9562-compliant UUIDv7 bytes
+1. Provide one UUIDv7 generation API per language that produces RFC 9562-compliant UUIDv7 bytes
 2. Support both standard UUID string format and raw 16-byte binary
 3. Include UUIDv7 compatibility vectors in conformance testing
 4. Validate against reference implementations in CI/CD

@@ -3,6 +3,7 @@ package snid
 import (
 	"sync"
 	"testing"
+	"time"
 )
 
 // TestGeneratorConcurrency tests concurrent ID generation for coverage
@@ -43,6 +44,63 @@ func TestNewFastWithPrefix(t *testing.T) {
 	id := NewFastWithPrefix(Matter)
 	if id == Zero {
 		t.Fatal("expected non-zero ID")
+	}
+}
+
+// TestRandomizedSequenceStart tests RFC 9562 Method 2: randomized sequence start
+func TestRandomizedSequenceStart(t *testing.T) {
+	// Generate multiple IDs and verify sequence starts are randomized
+	// by checking that we don't always start at 0
+	ids := make([]ID, 100)
+	for i := 0; i < 100; i++ {
+		ids[i] = NewFast()
+		// Small delay to ensure timestamp advances sometimes
+		if i%10 == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+
+	// Extract sequence values from IDs
+	sequences := make([]uint32, 100)
+	for i, id := range ids {
+		// Sequence is in bits 52-65 (14 bits)
+		hi := uint64(id[0])<<56 | uint64(id[1])<<48 | uint64(id[2])<<40 | uint64(id[3])<<32 |
+			uint64(id[4])<<24 | uint64(id[5])<<16 | uint64(id[6])<<8 | uint64(id[7])
+		sequences[i] = uint32(hi & 0x3FFF)
+	}
+
+	// Verify sequences are within valid bounds (0-16383)
+	for _, seq := range sequences {
+		if seq > 0x3FFF {
+			t.Fatalf("sequence %d exceeds maximum value 16383", seq)
+		}
+	}
+}
+
+// TestRandomizedSequenceBounds verifies sequence stays within 14-bit range
+func TestRandomizedSequenceBounds(t *testing.T) {
+	// Generate many IDs to test overflow handling
+	for i := 0; i < 10000; i++ {
+		id := NewFast()
+		hi := uint64(id[0])<<56 | uint64(id[1])<<48 | uint64(id[2])<<40 | uint64(id[3])<<32 |
+			uint64(id[4])<<24 | uint64(id[5])<<16 | uint64(id[6])<<8 | uint64(id[7])
+		seq := uint32(hi & 0x3FFF)
+		if seq > 0x3FFF {
+			t.Fatalf("sequence %d exceeds maximum value 16383", seq)
+		}
+	}
+}
+
+// TestRandomizedSequenceMonotonicity verifies IDs remain monotonic
+func TestRandomizedSequenceMonotonicity(t *testing.T) {
+	prev := NewFast()
+	for i := 0; i < 1000; i++ {
+		curr := NewFast()
+		// IDs should be strictly increasing (or equal within same ms)
+		if curr.Compare(prev) < 0 {
+			t.Fatalf("ID not monotonic: %v < %v", curr, prev)
+		}
+		prev = curr
 	}
 }
 

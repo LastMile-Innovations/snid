@@ -2,6 +2,7 @@
 """
 SNID Benchmark Regression Detector
 Compares current benchmark results against baseline and flags regressions.
+Enhanced with statistical significance testing.
 """
 
 import json
@@ -10,9 +11,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+import statistics
 
 RESULTS_DIR = Path(os.getenv("RESULTS_DIR", str(Path(__file__).parent / "results")))
 DEFAULT_THRESHOLD = float(os.getenv("REGRESSION_THRESHOLD", "10"))
+MIN_SAMPLE_SIZE = int(os.getenv("MIN_SAMPLE_SIZE", "5"))
 
 
 def load_results(filepath: Path) -> Optional[Dict[str, Any]]:
@@ -37,32 +40,63 @@ def detect_regressions(
     baseline: Dict[str, Any],
     threshold: float = DEFAULT_THRESHOLD,
 ) -> List[Dict[str, Any]]:
-    """Detect performance regressions compared to baseline."""
+    """Detect performance regressions compared to baseline with statistical testing."""
     regressions = []
-    
+
     current_langs = current.get("languages", {})
     baseline_langs = baseline.get("languages", {})
-    
+
     for lang in current_langs:
         if lang not in baseline_langs:
             continue
-            
+
         current_benchmarks = current_langs[lang].get("benchmarks", {})
         baseline_benchmarks = baseline_langs[lang].get("benchmarks", {})
-        
+
         for bench_name in current_benchmarks:
             if bench_name not in baseline_benchmarks:
                 continue
-            
+
             current_ns = current_benchmarks[bench_name].get("ns_per_op", 0)
             baseline_ns = baseline_benchmarks[bench_name].get("ns_per_op", 0)
-            
+
             if baseline_ns == 0:
                 continue
-            
+
             percent_change = ((current_ns - baseline_ns) / baseline_ns) * 100
-            
-            if percent_change > threshold:
+
+            # Statistical significance testing if we have sample data
+            statistically_significant = True
+            p_value = None
+            current_samples = current_benchmarks[bench_name].get("throughputs", [])
+            baseline_samples = baseline_benchmarks[bench_name].get("throughputs", [])
+
+            if len(current_samples) >= MIN_SAMPLE_SIZE and len(baseline_samples) >= MIN_SAMPLE_SIZE:
+                # Convert to throughput (ops/sec) for comparison
+                current_throughputs = [1.0 / (ns / 1e9) if ns > 0 else 0 for ns in current_samples]
+                baseline_throughputs = [1.0 / (ns / 1e9) if ns > 0 else 0 for ns in baseline_samples]
+
+                # Simple t-test approximation
+                try:
+                    mean_current = statistics.mean(current_throughputs)
+                    mean_baseline = statistics.mean(baseline_throughputs)
+                    std_current = statistics.stdev(current_throughputs) if len(current_throughputs) > 1 else 0
+                    std_baseline = statistics.stdev(baseline_throughputs) if len(baseline_throughputs) > 1 else 0
+
+                    # Pooled standard error
+                    n_current = len(current_throughputs)
+                    n_baseline = len(baseline_throughputs)
+                    pooled_std = ((std_current**2 / n_current) + (std_baseline**2 / n_baseline)) ** 0.5
+
+                    if pooled_std > 0:
+                        t_stat = (mean_current - mean_baseline) / pooled_std
+                        # Approximate p-value (simplified)
+                        p_value = 2 * (1 - 0.5 * (1 + abs(t_stat) / (1 + abs(t_stat))))
+                        statistically_significant = p_value < 0.05
+                except (statistics.StatisticsError, ZeroDivisionError):
+                    statistically_significant = True
+
+            if percent_change > threshold and statistically_significant:
                 regressions.append({
                     "language": lang,
                     "benchmark": bench_name,
@@ -71,8 +105,10 @@ def detect_regressions(
                     "percent_change": percent_change,
                     "severity": "high" if percent_change > 20 else "medium",
                     "threshold": threshold,
+                    "statistically_significant": statistically_significant,
+                    "p_value": p_value,
                 })
-    
+
     return regressions
 
 

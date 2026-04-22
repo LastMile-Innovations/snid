@@ -7,14 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"math/bits"
+	"strings"
 	"unsafe"
-
-	"github.com/google/uuid"
 )
 
 // Removed unused bufferPool - zero-alloc paths use stack allocation
 
 const base58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+// base32Crockford is the Crockford Base32 alphabet (case-insensitive, excludes I, L, O)
+const base32Crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 var crc8Table = [256]byte{
 	0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
@@ -37,6 +39,8 @@ var crc8Table = [256]byte{
 
 var b58Map [256]int8
 
+var b32Map [256]int8
+
 // init implements the corresponding operation.
 func init() {
 	for i := range b58Map {
@@ -44,6 +48,20 @@ func init() {
 	}
 	for i, c := range base58Alphabet {
 		b58Map[c] = int8(i)
+	}
+
+	for i := range b32Map {
+		b32Map[i] = -1
+	}
+	// Initialize Crockford Base32 map (case-insensitive)
+	for i, c := range base32Crockford {
+		b32Map[c] = int8(i)
+	}
+	// Add lowercase mappings
+	for i, c := range base32Crockford {
+		if c >= 'A' && c <= 'Z' {
+			b32Map[c+32] = int8(i) // Map lowercase to same value
+		}
 	}
 }
 
@@ -76,8 +94,21 @@ func crc8(data []byte) byte {
 	return crc
 }
 
-// String formats an ID using the default wire format (`SNID_WIRE_OUTPUT_FORMAT`).
+// String formats an ID using the default wire format with a specific atom.
+// Deprecated: Use StringDefault() for default MAT atom, or WithAtom() for custom.
 func (id ID) String(atom Atom) string {
+	return id.StringWithFormat(atom, DefaultWireFormat())
+}
+
+// StringDefault formats an ID using the default wire format with "MAT:" atom.
+// This is the universal paradigm for serialization (default atom).
+func (id ID) StringDefault() string {
+	return id.StringWithFormat(Matter, DefaultWireFormat())
+}
+
+// WithAtom formats an ID with a custom atom.
+// This is the universal paradigm for serialization (override atom).
+func (id ID) WithAtom(atom Atom) string {
 	return id.StringWithFormat(atom, DefaultWireFormat())
 }
 
@@ -121,6 +152,73 @@ func (id ID) StringCompact() string {
 	var buf [24]byte
 	res := id.appendPayload(buf[:0])
 	return bytesToString(res)
+}
+
+// StringBase32 formats an ID using Crockford Base32 encoding.
+// This is case-insensitive and excludes ambiguous characters (I, L, O).
+func (id ID) StringBase32() string {
+	var buf [27]byte // 26 chars for 128 bits + optional check digit
+	idx := 26
+
+	// Treat the 16-byte ID as a 128-bit big-endian integer (hi:lo).
+	hi := binary.BigEndian.Uint64(id[:8])
+	lo := binary.BigEndian.Uint64(id[8:])
+
+	// Repeatedly divide (hi:lo) by 32, recording remainders right-to-left.
+	for hi > 0 || lo > 0 {
+		qhi := hi / 32
+		rhi := hi - qhi*32
+		qlo, rem := bits.Div64(rhi, lo, 32)
+		hi, lo = qhi, qlo
+		buf[idx] = base32Crockford[rem]
+		idx--
+	}
+
+	// Add modulo-32 check digit
+	chk := crc8(id[:])
+	buf[idx] = base32Crockford[chk%32]
+	idx--
+
+	return bytesToString(buf[idx+1:])
+}
+
+// decodeBase32 decodes a Crockford Base32 string back to bytes.
+func decodeBase32(s string) ([]byte, error) {
+	// Remove check digit if present (last character)
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+
+	var result [16]byte
+	var hi, lo uint64
+
+	// Decode Base32 string to 128-bit integer (hi:lo)
+	for _, c := range s {
+		idx := b32Map[c]
+		if idx == -1 {
+			return nil, ErrInvalidFormat
+		}
+		// Multiply by 32 and add new digit
+		hi = hi*32 + lo>>60
+		lo = (lo << 5) + uint64(idx)
+	}
+
+	binary.BigEndian.PutUint64(result[:8], hi)
+	binary.BigEndian.PutUint64(result[8:], lo)
+
+	return result[:], nil
+}
+
+// ParseBase32 parses a Crockford Base32 string into an ID.
+func (id *ID) ParseBase32(s string) error {
+	// Convert to uppercase for case-insensitive parsing
+	s = strings.ToUpper(s)
+	data, err := decodeBase32(s)
+	if err != nil {
+		return err
+	}
+	copy(id[:], data)
+	return nil
 }
 
 // AppendTo appends the atom-prefixed encoded ID using the default wire format.
@@ -272,7 +370,7 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(s) == 36 {
-		u, err := uuid.Parse(s)
+		u, err := ParseUUID(s)
 		if err == nil {
 			*id = ID(u)
 			return nil
@@ -305,7 +403,7 @@ func (id *ID) UnmarshalText(text []byte) error {
 	if id == nil {
 		return ErrNilID
 	}
-	u, err := uuid.ParseBytes(text)
+	u, err := ParseUUIDBytes(text)
 	if err != nil {
 		return err
 	}
@@ -357,7 +455,7 @@ func (id *ID) Scan(src any) error {
 		}
 		s := bytesToString(v)
 		if len(s) == 36 {
-			u, err := uuid.Parse(s)
+			u, err := ParseUUID(s)
 			if err == nil {
 				*id = ID(u)
 				return nil
@@ -367,7 +465,7 @@ func (id *ID) Scan(src any) error {
 		return err
 	case string:
 		if len(v) == 36 {
-			u, err := uuid.Parse(v)
+			u, err := ParseUUID(v)
 			if err == nil {
 				*id = ID(u)
 				return nil

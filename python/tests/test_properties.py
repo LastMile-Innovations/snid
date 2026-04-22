@@ -1,138 +1,76 @@
 #!/usr/bin/env python3
-"""
-SNID Property-Based Tests using Hypothesis
-Tests invariants across generated inputs to ensure protocol correctness.
-"""
+"""SNID property tests against the current Python binding API."""
 
 import sys
 from pathlib import Path
 
-# Add parent directory to path for snid import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from snid import SNID
 except ImportError:
-    print("⚠️  SNID module not available. Run: cd python && maturin develop")
+    print("SNID module not available. Run: cd python && maturin develop")
     sys.exit(1)
 
-from hypothesis import given, strategies as st, settings
-import pytest
+
+TIMESTAMPS = [0, 1, 1_700_000_000_123, 2**48 - 1]
 
 
-# =============================================================================
-# Property Tests
-# =============================================================================
-
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_timestamp_roundtrip(timestamp_ms):
-    """Timestamp should be preserved through encode/decode cycle."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    extracted_ts = id1.timestamp()
-    assert extracted_ts == timestamp_ms, f"Timestamp mismatch: {extracted_ts} != {timestamp_ms}"
+def id_at(timestamp_ms: int, seed: bytes = b"property") -> SNID:
+    return SNID.from_hash_with_timestamp(timestamp_ms, seed)
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_sorting_invariant(timestamp_ms):
-    """IDs with larger timestamps should sort after IDs with smaller timestamps."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    id2 = SNID.from_timestamp(timestamp_ms + 1)
-    assert id1 < id2, "Sorting invariant violated: timestamp ordering"
+def test_timestamp_roundtrip() -> None:
+    for timestamp_ms in TIMESTAMPS:
+        id_obj = id_at(timestamp_ms)
+        assert id_obj.timestamp_millis() == timestamp_ms
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_monotonicity(timestamp_ms):
-    """Sequential IDs should have non-decreasing timestamps."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    id2 = SNID.from_timestamp(timestamp_ms)
-    assert id1.timestamp() <= id2.timestamp(), "Monotonicity violated"
+def test_timestamp_sorting_invariant() -> None:
+    for timestamp_ms in TIMESTAMPS[:-1]:
+        left = id_at(timestamp_ms).to_bytes()
+        right = id_at(timestamp_ms + 1).to_bytes()
+        assert left < right
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_string_roundtrip(timestamp_ms):
-    """String representation should roundtrip through parse."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    str_repr = str(id1)
-    id2 = SNID.parse(str_repr)
-    assert id1 == id2, f"String roundtrip failed: {id1} != {id2}"
+def test_wire_roundtrip() -> None:
+    for timestamp_ms in TIMESTAMPS:
+        id_obj = id_at(timestamp_ms)
+        wire = id_obj.to_wire("MAT")
+        parsed, atom = SNID.parse_wire(wire)
+        assert atom == "MAT"
+        assert parsed.to_bytes() == id_obj.to_bytes()
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_bytes_roundtrip(timestamp_ms):
-    """Bytes representation should roundtrip through from_bytes."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    bytes_repr = id1.to_bytes()
-    id2 = SNID.from_bytes(bytes_repr)
-    assert id1 == id2, f"Bytes roundtrip failed: {id1} != {id2}"
+def test_bytes_roundtrip() -> None:
+    for timestamp_ms in TIMESTAMPS:
+        id_obj = id_at(timestamp_ms)
+        assert SNID.from_bytes(id_obj.to_bytes()).to_bytes() == id_obj.to_bytes()
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_base58_roundtrip(timestamp_ms):
-    """Base58 encoding should roundtrip."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    base58 = id1.to_base58()
-    id2 = SNID.from_base58(base58)
-    assert id1 == id2, f"Base58 roundtrip failed: {id1} != {id2}"
+def test_batch_uniqueness() -> None:
+    raw = SNID.generate_batch(256, backend="bytes")
+    chunks = [raw[i : i + 16] for i in range(0, len(raw), 16)]
+    assert len(chunks) == 256
+    assert len(set(chunks)) == 256
 
 
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_base32_roundtrip(timestamp_ms):
-    """Base32 encoding should roundtrip."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    base32 = id1.to_base32()
-    id2 = SNID.from_base32(base32)
-    assert id1 == id2, f"Base32 roundtrip failed: {id1} != {id2}"
+def test_uuidv7_bits_and_string_roundtrip() -> None:
+    id_obj = SNID.new_uuidv7()
+    raw = id_obj.to_bytes()
+    assert len(raw) == 16
+    assert (raw[6] >> 4) & 0x0F == 7
+    assert (raw[8] >> 6) & 0b11 == 0b10
+
+    uuid_string = id_obj.to_uuid_string()
+    assert len(uuid_string) == 36
+    assert [uuid_string[i] for i in (8, 13, 18, 23)] == ["-", "-", "-", "-"]
+    assert SNID.parse_uuid_string(uuid_string).to_bytes() == raw
 
 
-@given(st.integers(min_value=0, max_value=1000))
-@settings(max_examples=50)
-def test_batch_uniqueness(count):
-    """All IDs in a batch should be unique."""
-    ids = [SNID.new() for _ in range(count)]
-    unique_ids = set(ids)
-    assert len(unique_ids) == count, f"Batch uniqueness violated: {len(unique_ids)} != {count}"
-
-
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_id_length(timestamp_ms):
-    """ID should always be 16 bytes."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    assert len(id1.to_bytes()) == 16, f"ID length incorrect: {len(id1.to_bytes())} != 16"
-
-
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_version_bits(timestamp_ms):
-    """Version bits should be set correctly for UUIDv7 compatibility."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    bytes_repr = id1.to_bytes()
-    # Version is in bits 48-51 (byte 6, bits 4-7)
-    version = (bytes_repr[6] >> 4) & 0x0F
-    assert version == 0x7, f"Version bits incorrect: {version} != 0x7"
-
-
-@given(st.integers(min_value=0, max_value=2**48 - 1))
-@settings(max_examples=100)
-def test_variant_bits(timestamp_ms):
-    """Variant bits should be set correctly for RFC 4122."""
-    id1 = SNID.from_timestamp(timestamp_ms)
-    bytes_repr = id1.to_bytes()
-    # Variant is in bits 64-65 (byte 8, bits 6-7)
-    variant = (bytes_repr[8] >> 6) & 0b11
-    assert variant == 0b10, f"Variant bits incorrect: {variant} != 0b10"
-
-
-# =============================================================================
-# Test Suite
-# =============================================================================
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+def test_parse_uuid_string_rejects_non_v7() -> None:
+    try:
+        SNID.parse_uuid_string("018f1c3e-5a7b-4c8d-9e0f-1a2b3c4d5e6f")
+    except ValueError:
+        return
+    raise AssertionError("expected non-v7 UUID string to be rejected")

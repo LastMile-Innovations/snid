@@ -15,7 +15,11 @@ pub struct GrantId {
 }
 
 impl GrantId {
-    pub fn new(atom: &str, ttl: Option<std::time::Duration>, _secret: &[u8]) -> Result<Self, Error> {
+    pub fn new(
+        atom: &str,
+        ttl: Option<std::time::Duration>,
+        _secret: &[u8],
+    ) -> Result<Self, Error> {
         let atom = Snid::canonical_atom(atom).ok_or(Error::InvalidAtom)?;
         let id = Snid::new_fast();
         let expires_at = ttl.map(|d| SystemTime::now() + d);
@@ -71,7 +75,9 @@ impl GrantId {
 
         if let Some(at_idx) = main_part.rfind('@') {
             id_part = &main_part[..at_idx];
-            let ts: u64 = main_part[at_idx + 1..].parse().map_err(|_| Error::InvalidFormat)?;
+            let ts: u64 = main_part[at_idx + 1..]
+                .parse()
+                .map_err(|_| Error::InvalidFormat)?;
             exp = Some(UNIX_EPOCH + std::time::Duration::from_secs(ts));
         }
 
@@ -134,20 +140,27 @@ impl ScopeId {
 
         if delim_idx >= dot_idx {
             let (id, atom) = Snid::parse_wire(s)?;
-            return Ok((Self { id, scope: String::new() }, atom));
+            return Ok((
+                Self {
+                    id,
+                    scope: String::new(),
+                },
+                atom,
+            ));
         }
 
         let atom = &s[..delim_idx];
         let scope = &s[delim_idx + 1..dot_idx];
 
-        let id = Snid::from_hex(&encode_payload(
-            decode_payload(&s[dot_idx + 1..])?
-        ))?;
+        let id = Snid::from_hex(&encode_payload(decode_payload(&s[dot_idx + 1..])?))?;
 
-        Ok((Self {
-            id,
-            scope: scope.to_string(),
-        }, atom.to_string()))
+        Ok((
+            Self {
+                id,
+                scope: scope.to_string(),
+            },
+            atom.to_string(),
+        ))
     }
 }
 
@@ -209,18 +222,25 @@ impl AliasId {
 
         if colon_idx >= slash_idx {
             let (id, atom) = Snid::parse_wire(s)?;
-            return Ok((Self { id, alias: String::new() }, atom));
+            return Ok((
+                Self {
+                    id,
+                    alias: String::new(),
+                },
+                atom,
+            ));
         }
 
         let atom = &s[..colon_idx];
         let alias = &s[colon_idx + 1..slash_idx];
-        let id = Snid::from_hex(&encode_payload(
-            decode_payload(&s[slash_idx + 1..])?
-        ))?;
+        let id = Snid::from_hex(&encode_payload(decode_payload(&s[slash_idx + 1..])?))?;
 
-        Ok((Self {
-            id,
-            alias: alias.to_string(),
-        }, atom.to_string()))
+        Ok((
+            Self {
+                id,
+                alias: alias.to_string(),
+            },
+            atom.to_string(),
+        ))
     }
 }

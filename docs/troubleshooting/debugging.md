@@ -124,7 +124,7 @@ logging.debug(f"Generated ID: {id.to_bytes().hex()}")
 ```python
 id = snid.SNID.new_fast()
 print(f"Bytes: {id.to_bytes().hex()}")
-print(f"UUID: {id.to_uuid()}")
+print(f"UUID: {id.to_uuid_string()}")
 print(f"Wire: {id.to_wire('MAT')}")
 ```
 

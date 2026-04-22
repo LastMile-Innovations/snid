@@ -30,6 +30,11 @@ def benchmark_snid():
     """Benchmark SNID generation with multiple samples."""
     if SNID is None:
         return {"error": "SNID module not available"}
+    
+    # Warmup
+    for _ in range(3):
+        SNID.new_fast()
+    
     samples = []
     for _ in range(5):
         samples.append(timeit.timeit("SNID.new_fast()", setup="from snid import SNID", number=100_000))
@@ -44,6 +49,11 @@ def benchmark_uuidv7():
     """Benchmark UUIDv7 generation (Python 3.14+) with multiple samples."""
     try:
         import uuid
+        
+        # Warmup
+        for _ in range(3):
+            uuid.uuid7()
+        
         samples = []
         for _ in range(5):
             samples.append(timeit.timeit("uuid.uuid7()", setup="import uuid", number=100_000))
@@ -60,6 +70,11 @@ def benchmark_ulid():
     """Benchmark ULID generation with multiple samples."""
     try:
         import ulid
+        
+        # Warmup
+        for _ in range(3):
+            ulid.new()
+        
         samples = []
         for _ in range(5):
             samples.append(timeit.timeit("ulid.new()", setup="import ulid", number=100_000))
@@ -76,6 +91,11 @@ def benchmark_nanoid():
     """Benchmark NanoID generation with multiple samples."""
     try:
         import nanoid
+        
+        # Warmup
+        for _ in range(3):
+            nanoid.generate()
+        
         samples = []
         for _ in range(5):
             samples.append(timeit.timeit("nanoid.generate()", setup="import nanoid", number=100_000))
@@ -92,6 +112,11 @@ def benchmark_ksuid():
     """Benchmark KSUID generation with multiple samples."""
     try:
         import ksuid
+        
+        # Warmup
+        for _ in range(3):
+            ksuid.ksuid()
+        
         samples = []
         for _ in range(5):
             samples.append(timeit.timeit("ksuid.ksuid()", setup="import ksuid", number=100_000))

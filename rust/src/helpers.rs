@@ -57,7 +57,12 @@ pub fn fnv1a64_lower(s: &str) -> u64 {
 pub fn sanitize_alias(s: &str) -> String {
     s.chars()
         .map(|c| {
-            if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' {
+            if (c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z')
+                || (c >= '0' && c <= '9')
+                || c == '-'
+                || c == '_'
+            {
                 c
             } else if c == ' ' {
                 '-'

@@ -5,6 +5,10 @@ use crate::error::Error;
 pub const BASE58_ALPHABET: &[u8; 58] =
     b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
+// Crockford Base32 alphabet (case-insensitive, excludes I, L, O)
+pub const BASE32_CROCKFORD: &[u8; 32] =
+    b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
 pub const CRC8_TABLE: [u8; 256] = [
     0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
     0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65, 0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
@@ -24,6 +28,7 @@ pub const CRC8_TABLE: [u8; 256] = [
     0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3,
 ];
 
+#[inline(always)]
 pub fn crc8(data: &[u8]) -> u8 {
     let mut crc = 0u8;
     for byte in data {
@@ -32,6 +37,7 @@ pub fn crc8(data: &[u8]) -> u8 {
     crc
 }
 
+#[inline(always)]
 pub fn encode_payload(bytes: [u8; 16]) -> String {
     let mut buf = [0u8; 24];
     let mut idx = 23usize;
@@ -70,6 +76,7 @@ pub fn encode_payload(bytes: [u8; 16]) -> String {
     String::from_utf8(buf[idx + 1..].to_vec()).unwrap()
 }
 
+#[inline(always)]
 pub fn decode_payload(payload: &str) -> Result<[u8; 16], Error> {
     if payload.len() < 2 {
         return Err(Error::InvalidPayload);
@@ -96,6 +103,97 @@ pub fn decode_payload(payload: &str) -> Result<[u8; 16], Error> {
         return Err(Error::ChecksumMismatch);
     }
     Ok(out)
+}
+
+pub fn encode_base32(bytes: [u8; 16]) -> String {
+    let mut buf = [0u8; 27]; // 26 chars for 128 bits + check digit
+    let mut idx = 26;
+
+    let checksum = crc8(&bytes);
+    buf[idx] = BASE32_CROCKFORD[(checksum % 32) as usize];
+    idx -= 1;
+
+    let mut hi = u64::from_be_bytes(bytes[..8].try_into().unwrap());
+    let mut lo = u64::from_be_bytes(bytes[8..].try_into().unwrap());
+
+    while hi > 0 || lo > 0 {
+        let qhi = hi / 32;
+        let rhi = hi - qhi * 32;
+        let dividend = ((rhi as u128) << 64) | lo as u128;
+        let qlo = (dividend / 32) as u64;
+        let rem = (dividend % 32) as usize;
+        hi = qhi;
+        lo = qlo;
+        buf[idx] = BASE32_CROCKFORD[rem];
+        if idx == 0 {
+            break;
+        }
+        idx -= 1;
+    }
+
+    String::from_utf8(buf[idx + 1..].to_vec()).unwrap()
+}
+
+pub fn decode_base32(payload: &str) -> Result<[u8; 16], Error> {
+    // Remove check digit if present (last character)
+    let body = if payload.len() > 0 {
+        &payload[..payload.len() - 1]
+    } else {
+        return Err(Error::InvalidPayload);
+    };
+
+    let mut out = [0u8; 16];
+    let mut hi: u64 = 0;
+    let mut lo: u64 = 0;
+
+    for ch in body.bytes() {
+        let ch_upper = ch.to_ascii_uppercase();
+        let value = BASE32_CROCKFORD
+            .iter()
+            .position(|candidate| *candidate == ch_upper)
+            .ok_or(Error::InvalidPayload)? as u64;
+
+        // Multiply by 32 and add new digit
+        hi = hi.wrapping_mul(32).wrapping_add(lo >> 60);
+        lo = (lo << 5).wrapping_add(value);
+    }
+
+    out[..8].copy_from_slice(&hi.to_be_bytes());
+    out[8..].copy_from_slice(&lo.to_be_bytes());
+
+    Ok(out)
+}
+
+#[test]
+fn test_encode_base32() {
+    let bytes = [0u8; 16];
+    let encoded = encode_base32(bytes);
+    assert!(!encoded.is_empty());
+    assert!(encoded.len() <= 27); // 26 chars + check digit
+}
+
+#[test]
+fn test_encode_base32_roundtrip() {
+    let bytes = [1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    let encoded = encode_base32(bytes);
+    let decoded = decode_base32(&encoded).unwrap();
+    assert_eq!(bytes, decoded);
+}
+
+#[test]
+fn test_decode_base32_invalid() {
+    let invalid = "INVALID!@#";
+    let result = decode_base32(invalid);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_decode_base32_case_insensitive() {
+    let bytes = [1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    let encoded = encode_base32(bytes);
+    let decoded_upper = decode_base32(&encoded).unwrap();
+    let decoded_lower = decode_base32(&encoded.to_lowercase()).unwrap();
+    assert_eq!(decoded_upper, decoded_lower);
 }
 
 pub fn encode_fixed64_pair(hi: i64, lo: i64) -> [u8; 16] {
@@ -156,7 +254,10 @@ mod tests {
 
     #[test]
     fn test_encode_decode_roundtrip() {
-        let bytes = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
+        let bytes = [
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            0x77, 0x88,
+        ];
         let encoded = encode_payload(bytes);
         let decoded = decode_payload(&encoded).unwrap();
         assert_eq!(decoded, bytes);

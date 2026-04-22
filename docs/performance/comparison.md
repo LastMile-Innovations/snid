@@ -335,8 +335,8 @@ Production migrations report:
 | SNID (Go) | 4.106 ns | 1x | - |
 | SNID (Rust) | ~5 ns | ~1.34x | - |
 | SNID (Python, batch) | ~5.4 ns/ID | ~1.45x | - |
-| UUID v7 (google/uuid) | 297.8 ns | 72.5x | ~71.8 μs |
-| UUID v4 (google/uuid) | 200.5 ns | 48.8x | ~71.4 μs |
+| UUID v7 library baseline | 297.8 ns | 72.5x | ~71.8 μs |
+| UUID v4 library baseline | 200.5 ns | 48.8x | ~71.4 μs |
 | ULID (oklog/ulid) | 44.16 ns | 10.8x | ~13 μs |
 | XID (rs/xid) | 35.12 ns | 8.6x | - |
 | KSUID (segmentio/ksuid) | 244.1 ns | 59.4x | - |
