@@ -1,0 +1,25 @@
+# Code Owners for SNID
+
+# Core protocol and Go implementation (reference implementation)
+* @lastmile-innovations/maintainers
+go/ @lastmile-innovations/go-team
+
+# Rust implementation
+rust/ @lastmile-innovations/rust-team
+
+# Python implementation
+python/ @lastmile-innovations/python-team
+
+# Conformance suite (critical - all implementations must pass)
+conformance/ @lastmile-innovations/maintainers
+
+# Protocol specification
+docs/SPEC.md @lastmile-innovations/maintainers
+
+# Security-related files
+SECURITY.md @lastmile-innovations/security-team
+go/akid.go @lastmile-innovations/security-team
+rust/src/akid.rs @lastmile-innovations/security-team
+
+# CI/CD workflows
+.github/workflows/ @lastmile-innovations/devops-team
