@@ -1,17 +1,35 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/neighbor/snid/go
+pkg: github.com/LastMile-Innovations/snid
 cpu: Apple M4
-BenchmarkSNIDNewFastParallel-10          	1000000000	         0.7622 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSNIDStringMatterParallel-10     	58519456	        22.67 ns/op	      48 B/op	       1 allocs/op
-BenchmarkLIDVerifyParallel-10            	 8775829	       131.9 ns/op	     560 B/op	       8 allocs/op
-BenchmarkBIDWireFormat-10                	 4521374	       265.2 ns/op	     296 B/op	       5 allocs/op
-BenchmarkEIDNew-10                       	711200142	         1.664 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSNIDToTensorWords-10            	1000000000	         0.2401 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSNIDToLLMFormat-10              	433879609	         2.769 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSNIDDeterministicIngestID-10    	24048457	        49.84 ns/op	       0 B/op	       0 allocs/op
+BenchmarkParseAKID-10                    	 2344104	       518.6 ns/op	      56 B/op	       2 allocs/op
+BenchmarkUUIDv7New-10                    	 4587079	       297.8 ns/op	      16 B/op	       1 allocs/op
+BenchmarkUUIDv7NewString-10              	 4396915	       274.9 ns/op	      64 B/op	       2 allocs/op
+BenchmarkSNIDNewFast-10                  	302932831	         4.106 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDNewFastString-10            	11229589	       108.7 ns/op	      48 B/op	       1 allocs/op
+BenchmarkSNIDNewFastParallel-10          	1000000000	         1.450 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDStringMatterParallel-10     	25468220	        62.99 ns/op	      48 B/op	       1 allocs/op
+BenchmarkLIDVerifyParallel-10            	 6217008	       178.7 ns/op	     560 B/op	       8 allocs/op
+BenchmarkBIDWireFormat-10                	 3662442	       327.5 ns/op	     296 B/op	       5 allocs/op
+BenchmarkEIDNew-10                       	650362588	         2.011 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToTensorWords-10            	1000000000	         0.7189 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDToLLMFormat-10              	323280325	         3.845 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDDeterministicIngestID-10    	22806570	        53.29 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNewBurst-10                     	  618211	      2132 ns/op	   16384 B/op	       1 allocs/op
+BenchmarkBase58Bytes/encode_8_bytes-10   	23701830	        50.89 ns/op	      16 B/op	       1 allocs/op
+BenchmarkBase58Bytes/decode_8_bytes-10   	29822492	        42.18 ns/op	       8 B/op	       1 allocs/op
+BenchmarkBase58Bytes/encode_24_bytes-10  	 1280018	       786.7 ns/op	      48 B/op	       1 allocs/op
+BenchmarkBase58Bytes/decode_24_bytes-10  	 3335415	       321.1 ns/op	      24 B/op	       1 allocs/op
+BenchmarkSNIDWireEncoding/String-10      	11291588	       106.5 ns/op	      48 B/op	       1 allocs/op
+BenchmarkSNIDWireEncoding/StringCompact-10         	 9648642	       107.3 ns/op	      24 B/op	       1 allocs/op
+BenchmarkSNIDWireEncoding/AppendTo-10              	12960368	        94.42 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDWireEncoding/FromString-10            	 7404382	       173.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSNIDWireEncoding/ParseCompact-10          	 7399050	       171.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAKIDEncoding/EncodeAKIDSecret-10          	 1494540	       845.8 ns/op	      96 B/op	       2 allocs/op
+BenchmarkAKIDEncoding/VerifyAKIDSecretChecksum-10  	 3636478	       331.2 ns/op	      24 B/op	       1 allocs/op
+BenchmarkAKIDEncoding/ParseAKID-10                 	 2248533	       566.4 ns/op	      56 B/op	       2 allocs/op
 PASS
-ok  	github.com/neighbor/snid/go	9.620s
-?   	github.com/neighbor/snid/go/internal/vector	[no test files]
+ok  	github.com/LastMile-Innovations/snid	42.922s
+?   	github.com/LastMile-Innovations/snid/internal/vector	[no test files]
 PASS
-ok  	github.com/neighbor/snid/go/neo4j	0.271s
+ok  	github.com/LastMile-Innovations/snid/neo4j	0.385s
