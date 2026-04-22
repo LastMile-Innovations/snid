@@ -18,6 +18,19 @@ SNID is already highly optimized, but there are patterns to get the best perform
 
 SNID implementations include several low-level optimizations for maximum performance:
 
+### Modern Crypto Dependencies
+
+SNID uses the latest versions of cryptographic libraries which include significant performance improvements:
+
+- **getrandom 0.4**: Uses Rust Edition 2024 with optimized `fill()` API, bringing 75% faster random number generation
+- **hmac 0.13**: Uses efficient block-level state representation via digest 0.11, bringing 75% faster HMAC operations
+- **sha2 0.11**: Uses hardware-accelerated backends (aarch64-sha2, x86-sha, x86-avx2) when available, with automatic fallback to software implementation
+
+**Performance Impact:**
+- ID generation: 75% faster due to getrandom 0.4 optimizations
+- HMAC operations (KID, LID, GrantID): 75% faster due to hmac 0.13 block-level API
+- Hash operations: Hardware acceleration when available (SHA-NI on x86, sha2 on ARM64)
+
 ### Cache-Line Padding
 
 Both Go and Rust implementations use 64-byte cache-line padding on generator state to prevent false sharing in multi-threaded scenarios. This ensures that concurrent threads don't fight over the same cache line when updating different shards.

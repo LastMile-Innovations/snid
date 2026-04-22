@@ -3,7 +3,7 @@
 use crate::core::Snid;
 use crate::error::Error;
 use crate::helpers::splitmix64;
-use getrandom::getrandom;
+use getrandom::fill;
 use std::cell::UnsafeCell;
 use std::mem::MaybeUninit;
 use std::process;
@@ -50,7 +50,7 @@ impl GeneratorState {
     pub(crate) fn try_init() -> Result<Self, Error> {
         init_coarse_clock();
         let mut seed = [0u8; 8];
-        getrandom(&mut seed)?;
+        fill(&mut seed)?;
         let mut z = u64::from_le_bytes(seed);
         let pid = process::id();
         let machine_id = (splitmix64(&mut z) as u32 ^ pid) & 0x00FF_FFFF;

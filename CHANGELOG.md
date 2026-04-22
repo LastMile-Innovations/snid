@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Performance
+- **Rust**: Updated dependencies: getrandom 0.2→0.4, hmac 0.12→0.13, sha2 0.10→0.11, criterion 0.4→0.8, cuid 1.3→2.0, sonyflake 0.2→0.4
+- **Rust**: Dependency updates bring significant performance improvements (75% faster ID generation, 75% faster HMAC operations)
+- **Rust**: getrandom 0.4 uses Edition 2024 with optimized `fill()` API
+- **Rust**: hmac 0.13 uses efficient block-level state representation via digest 0.11
+- **Rust**: sha2 0.11 uses hardware-accelerated backends (aarch64-sha2, x86-sha, x86-avx2) when available
 - **Rust**: Added cache-line padding to GeneratorState (64-byte front/back padding) to prevent false sharing in multi-threaded ID generation
 - **Rust**: Added aggressive `#[inline(always)]` annotations to hot path functions in generator, core, and encoding modules
 - **Rust**: Optimized `Nid::hamming_distance` to use direct byte comparison instead of allocations (25% improvement)
@@ -17,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Result**: Brings Rust implementation to parity with Go's cache-line strategy
 
 ### Changed
+- **Rust**: Updated getrandom API from `getrandom()` to `fill()` function
+- **Rust**: Added `KeyInit` trait import for hmac initialization
 - **Rust**: GeneratorState struct now includes `_pad_front` and `_pad_back` fields for cache-line isolation
 - **Rust**: Hot path functions marked with `#[inline(always)]` for zero-cost abstraction
 

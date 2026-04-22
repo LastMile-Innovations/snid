@@ -4,7 +4,7 @@ use crate::core::Snid;
 use crate::encoding::{decode_payload, encode_payload};
 use crate::error::Error;
 use crate::helpers::fnv1a;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
@@ -114,7 +114,7 @@ fn sign_grant(
     secret: &[u8],
 ) -> Result<[u8; 16], Error> {
     let mut mac =
-        <HmacSha256 as hmac::Mac>::new_from_slice(secret).map_err(|_| Error::InvalidKey)?;
+        HmacSha256::new_from_slice(secret).map_err(|_| Error::InvalidKey)?;
     mac.update(&id.0);
     mac.update(atom.as_bytes());
     match expires_at {

@@ -3,7 +3,7 @@
 use crate::core::Snid;
 use crate::encoding::{decode_base32_32, encode_base32_32_lower_to, encode_payload_to};
 use crate::error::Error;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
@@ -93,7 +93,7 @@ impl Lid {
             return Err(Error::InvalidKey);
         }
         let mut mac =
-            <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+            HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&prev);
         mac.update(payload);
@@ -191,7 +191,7 @@ impl Kid {
             return Err(Error::InvalidKey);
         }
         let mut mac =
-            <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+            HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&actor.0);
         mac.update(resource);

@@ -4,7 +4,7 @@ use crate::core::Snid;
 use crate::encoding::encode_payload;
 use crate::error::Error;
 use crate::helpers::{hex_encode_fast, hex_encode_to};
-use getrandom::getrandom;
+use getrandom::fill;
 use std::fmt;
 use std::str::FromStr;
 
@@ -19,7 +19,7 @@ impl ShortId {
 
     pub fn try_new() -> Result<Self, Error> {
         let mut raw = [0u8; 8];
-        getrandom(&mut raw)?;
+        fill(&mut raw)?;
         Ok(Self(raw))
     }
 

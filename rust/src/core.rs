@@ -340,7 +340,7 @@ impl Snid {
 
         // Generate 74 bits of pure CSPRNG entropy
         let mut entropy = [0u8; 10]; // 80 bits, we'll use 74
-        getrandom::getrandom(&mut entropy)?;
+        getrandom::fill(&mut entropy)?;
 
         // Assemble the ID with time-blurred timestamp and CSPRNG entropy
         // Layout: [timestamp (48 bits)][version (4 bits)][entropy (74 bits)][variant (2 bits)]
