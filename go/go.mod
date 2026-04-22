@@ -1,4 +1,4 @@
-module github.com/neighbor/snid
+module github.com/LastMile-Innovations/snid
 
 go 1.25.0
 

@@ -41,7 +41,7 @@ import "github.com/segmentio/ksuid"
 id := ksuid.New()
 
 // After
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 id := snid.NewFast()
 ```
 

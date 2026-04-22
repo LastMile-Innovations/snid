@@ -36,7 +36,7 @@
 //!
 //! - `data` - Enable serde serialization and JSON support
 //!
-//! For protocol specification, see <https://github.com/neighbor/snid/blob/main/docs/SPEC.md>
+//! For protocol specification, see <https://github.com/LastMile-Innovations/snid/blob/main/docs/SPEC.md>
 
 // Module declarations
 mod core;

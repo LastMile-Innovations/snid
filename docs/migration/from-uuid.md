@@ -90,7 +90,7 @@ id := uuid.New()
 
 **After (SNID):**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 id := snid.NewFast()
 ```
@@ -207,7 +207,7 @@ SNID provides a true drop-in replacement for RFC 9562 UUIDv7. The core SNID type
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 // Generate UUIDv7-compatible ID
 id := snid.NewUUIDv7()

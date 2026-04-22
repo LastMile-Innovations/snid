@@ -149,7 +149,7 @@ batch = snid.SNID.generate_batch(1000, backend="bytes")
 
 **Error:**
 ```
-cannot find package "github.com/neighbor/snid"
+cannot find package "github.com/LastMile-Innovations/snid"
 ```
 
 **Cause:** Go module not downloaded.
@@ -345,7 +345,7 @@ pip install pre-commit
 If you encounter an error not listed here:
 
 1. Check the [FAQ](faq.md) for common questions
-2. Search [GitHub Issues](https://github.com/neighbor/snid/issues)
+2. Search [GitHub Issues](https://github.com/LastMile-Innovations/snid/issues)
 3. Create a new issue with:
    - Error message
    - Code snippet

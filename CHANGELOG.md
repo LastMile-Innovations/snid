@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CHANGELOG.md for tracking version changes
 
 ### Changed
-- Go module path from `github.com/neighbor/snid/go` to `github.com/neighbor/snid`
+- Go module path from `github.com/LastMile-Innovations/snid/go` to `github.com/LastMile-Innovations/snid`
 - Version bumped to 0.2.0 across all packages
 - Rust package name changed from `snid-core` to `snid`
 - Enhanced Cargo.toml with repository, keywords, categories metadata
@@ -40,5 +40,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deterministic ingest constructors
 - Ghost bit helpers for masking flows
 
-[0.2.0]: https://github.com/neighbor/snid/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/neighbor/snid/releases/tag/v0.1.0
+[0.2.0]: https://github.com/LastMile-Innovations/snid/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/LastMile-Innovations/snid/releases/tag/v0.1.0

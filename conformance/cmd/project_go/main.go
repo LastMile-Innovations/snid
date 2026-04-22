@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	snid "github.com/neighbor/snid/go"
+	snid "github.com/LastMile-Innovations/snid/go"
 )
 
 type vectorFile struct {

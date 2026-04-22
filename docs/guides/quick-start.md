@@ -13,7 +13,7 @@ Get up and running with SNID in 5 minutes.
 
 **Go:**
 ```bash
-go get github.com/neighbor/snid
+go get github.com/LastMile-Innovations/snid
 ```
 
 **Rust:**
@@ -35,7 +35,7 @@ package main
 
 import (
     "fmt"
-    "github.com/neighbor/snid"
+    "github.com/LastMile-Innovations/snid"
 )
 
 func main() {
@@ -137,7 +137,7 @@ package main
 
 import (
     "fmt"
-    "github.com/neighbor/snid"
+    "github.com/LastMile-Innovations/snid"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/neighbor/snid/benchmarks/go
+module github.com/LastMile-Innovations/snid/benchmarks/go
 
 go 1.25.0
 

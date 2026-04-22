@@ -18,7 +18,7 @@ Thank you for your interest in contributing to SNID! This document provides guid
 
 ```bash
 # Clone repository
-git clone https://github.com/neighbor/snid.git
+git clone https://github.com/LastMile-Innovations/snid.git
 cd snid
 
 # Install development tools

@@ -1,8 +1,8 @@
-module github.com/neighbor/snid/conformance/generate-vectors
+module github.com/LastMile-Innovations/snid/conformance/generate-vectors
 
 go 1.25.0
 
-require github.com/neighbor/snid v0.0.0
+require github.com/LastMile-Innovations/snid v0.0.0
 
 require (
 	github.com/google/uuid v1.6.0 // indirect
@@ -13,4 +13,4 @@ require (
 	golang.org/x/sys v0.43.0 // indirect
 )
 
-replace github.com/neighbor/snid => ../../../go
+replace github.com/LastMile-Innovations/snid => ../../../go

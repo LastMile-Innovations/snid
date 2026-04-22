@@ -21,7 +21,7 @@ The 128-bit core SNID is the foundation for all extended families.
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 id := snid.NewFast()
 wire := id.String(snid.Matter)

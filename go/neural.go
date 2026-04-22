@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/neighbor/snid/internal/vector"
+	"github.com/LastMile-Innovations/snid/internal/vector"
 )
 
 // NeuralID is a 256-bit composite key.

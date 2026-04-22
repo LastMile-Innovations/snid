@@ -31,7 +31,7 @@ Bits 66-127:   rand_b (62 bits) - random
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 uuidv7 := snid.NewUUIDv7()
 string := uuidv7.String()  // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -104,7 +104,7 @@ ULID provides 26-character Crockford Base32 time-ordered identifiers. SNID can g
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 ulid := snid.NewULID()
 string := ulid.String()  // 26-char Crockford Base32
@@ -146,7 +146,7 @@ NanoID provides configurable-length URL-safe identifiers. SNID can generate Nano
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 nanoid := snid.NewNanoID()          // Default 21 chars
 nanoid := snid.NewNanoIDLength(10)  // Custom length
@@ -191,7 +191,7 @@ KSUID provides 20-byte time-ordered identifiers popular in Go ecosystems. SNID c
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 ksuid := snid.NewKSUID()
 string := ksuid.String()
@@ -232,7 +232,7 @@ CUID2 provides collision-resistant identifiers with fingerprinting. SNID can gen
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 cuid2 := snid.NewCUID2()
 string := cuid2.String()
@@ -273,7 +273,7 @@ TSID (Time-Sorted Unique ID) provides compact time-ordered identifiers popular i
 
 **Go:**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 tsid := snid.NewTSID()
 string := tsid.String()

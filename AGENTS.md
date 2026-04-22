@@ -69,7 +69,7 @@ cd python && python -m unittest discover -s tests
 ### Go
 - Standard `gofmt` formatting
 - Use godoc comments on exported functions
-- Package name is `snid` (module: `github.com/neighbor/snid`)
+- Package name is `snid` (module: `github.com/LastMile-Innovations/snid`)
 - **Use internal base58/base32 encoding** - do not add external base58 dependencies
 - **Batch loops must use `for i := 0; i < n; i++`** - not `for i := range n` when iterating by count
 

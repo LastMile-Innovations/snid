@@ -21,7 +21,7 @@
 //	BID  - Content-addressable IDs (topology + content hash)
 //	AKID - Dual-part public+secret credentials
 //
-// For protocol specification, see https://github.com/neighbor/snid/blob/main/docs/SPEC.md
+// For protocol specification, see https://github.com/LastMile-Innovations/snid/blob/main/docs/SPEC.md
 package snid
 
 import (

@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	snid "github.com/neighbor/snid"
+	snid "github.com/LastMile-Innovations/snid"
 )
 
 type vectorFile struct {

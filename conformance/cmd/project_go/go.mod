@@ -1,8 +1,8 @@
-module github.com/neighbor/snid/conformance/project-go
+module github.com/LastMile-Innovations/snid/conformance/project-go
 
 go 1.25.0
 
-require github.com/neighbor/snid/go v0.0.0
+require github.com/LastMile-Innovations/snid/go v0.0.0
 
 require (
 	github.com/google/uuid v1.6.0 // indirect
@@ -12,4 +12,4 @@ require (
 	github.com/zeebo/blake3 v0.2.4 // indirect
 )
 
-replace github.com/neighbor/snid/go => ../../../go
+replace github.com/LastMile-Innovations/snid/go => ../../../go

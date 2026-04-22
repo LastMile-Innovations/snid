@@ -287,11 +287,11 @@ See [From KSUID](migration/from-ksuid.md) for detailed guide.
 
 **Go:**
 ```bash
-go get github.com/neighbor/snid
+go get github.com/LastMile-Innovations/snid
 ```
 
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 id := snid.NewFast()
 wire := id.String(snid.Matter)

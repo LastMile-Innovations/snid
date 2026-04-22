@@ -387,7 +387,7 @@ If you're stuck:
 
 1. Check [Common Errors](common-errors.md) for known issues
 2. Check [FAQ](faq.md) for common questions
-3. Search [GitHub Issues](https://github.com/neighbor/snid/issues)
+3. Search [GitHub Issues](https://github.com/LastMile-Innovations/snid/issues)
 4. Create a new issue with:
    - Error message
    - Code snippet

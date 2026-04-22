@@ -138,5 +138,5 @@ MIT OR Apache-2.0
 
 ## Links
 
-- [Protocol Specification](https://github.com/neighbor/snid/blob/main/docs/SPEC.md)
-- [Repository](https://github.com/neighbor/snid)
+- [Protocol Specification](https://github.com/LastMile-Innovations/snid/blob/main/docs/SPEC.md)
+- [Repository](https://github.com/LastMile-Innovations/snid)

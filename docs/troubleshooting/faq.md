@@ -36,7 +36,7 @@ Atoms are type-tags applied at serialization time (e.g., MAT for matter, IAM for
 
 **Go:**
 ```bash
-go get github.com/neighbor/snid
+go get github.com/LastMile-Innovations/snid
 ```
 
 **Rust:**

@@ -26,8 +26,8 @@ classifiers = [
     "Programming Language :: Rust",
     "Topic :: Software Development :: Libraries",
 ]
-repository = "https://github.com/neighbor/snid"
-homepage = "https://github.com/neighbor/snid"
+repository = "https://github.com/LastMile-Innovations/snid"
+homepage = "https://github.com/LastMile-Innovations/snid"
 
 [project.optional-dependencies]
 data = [
@@ -51,8 +51,8 @@ ecosystem = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/neighbor/snid/blob/main/docs/SPEC.md"
-Source = "https://github.com/neighbor/snid"
+Documentation = "https://github.com/LastMile-Innovations/snid/blob/main/docs/SPEC.md"
+Source = "https://github.com/LastMile-Innovations/snid"
 
 [tool.maturin]
 python-source = "."

@@ -1,4 +1,4 @@
-module github.com/neighbor/snid/benchmarks/db
+module github.com/LastMile-Innovations/snid/benchmarks/db
 
 go 1.24
 

@@ -25,13 +25,13 @@ For contributing to SNID:
 #### Using go get
 
 ```bash
-go get github.com/neighbor/snid
+go get github.com/LastMile-Innovations/snid
 ```
 
 #### Manual installation
 
 ```bash
-git clone https://github.com/neighbor/snid.git
+git clone https://github.com/LastMile-Innovations/snid.git
 cd snid/go
 go mod download
 go test ./...
@@ -48,7 +48,7 @@ cargo add snid
 #### Manual installation
 
 ```bash
-git clone https://github.com/neighbor/snid.git
+git clone https://github.com/LastMile-Innovations/snid.git
 cd snid/rust
 cargo build
 cargo test
@@ -73,7 +73,7 @@ This installs optional dependencies for NumPy, PyArrow, and Polars integration.
 #### Manual installation
 
 ```bash
-git clone https://github.com/neighbor/snid.git
+git clone https://github.com/LastMile-Innovations/snid.git
 cd snid/python
 maturin develop
 python -m pytest tests/
@@ -97,7 +97,7 @@ pip install pre-commit
 ### Set up the repository
 
 ```bash
-git clone https://github.com/neighbor/snid.git
+git clone https://github.com/LastMile-Innovations/snid.git
 cd snid
 
 # Install language-specific dependencies

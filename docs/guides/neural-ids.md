@@ -25,7 +25,7 @@ package main
 
 import (
     "fmt"
-    "github.com/neighbor/snid"
+    "github.com/LastMile-Innovations/snid"
 )
 
 func main() {

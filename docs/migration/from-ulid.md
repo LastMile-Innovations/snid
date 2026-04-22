@@ -105,7 +105,7 @@ id := ulid.Make()
 
 **After (SNID):**
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 id := snid.NewFast()
 ```

@@ -41,7 +41,7 @@ SELECT * FROM items WHERE id = $1;
 ```go
 import (
     "database/sql"
-    "github.com/neighbor/snid"
+    "github.com/LastMile-Innovations/snid"
 )
 
 func insertItem(db *sql.DB, id snid.ID, name string) error {
@@ -174,7 +174,7 @@ RETURN n
 
 **Go:**
 ```go
-import "github.com/neighbor/snid/neo4j"
+import "github.com/LastMile-Innovations/snid/neo4j"
 
 func createItem(driver neo4j.Driver, id snid.ID, name string) error {
     session := driver.NewSession(neo4j.SessionConfig{})

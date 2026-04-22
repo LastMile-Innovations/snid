@@ -74,11 +74,11 @@ See [API Comparison](docs/api-comparison.md) for detailed analysis against 2026 
 
 ### Go
 ```bash
-go get github.com/neighbor/snid
+go get github.com/LastMile-Innovations/snid
 ```
 
 ```go
-import "github.com/neighbor/snid"
+import "github.com/LastMile-Innovations/snid"
 
 // Native SNID (recommended for new projects)
 id := snid.NewFast()
