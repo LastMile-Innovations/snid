@@ -93,7 +93,7 @@ jobs:
         working-directory: python
         run: pytest tests/test_bench.py --benchmark-json ../conformance/artifacts/python-bench.json
       - name: Upload benchmark artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: polyglot-benchmarks
           path: conformance/artifacts
