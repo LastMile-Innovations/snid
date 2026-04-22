@@ -1,0 +1,19 @@
+
+
+  [0;32m✓[0m snid_new_fast/snid_new_fast: 6.4842 ns (mean)
+  [0;32m✓[0m snid_new_safe/snid_new_safe: 652.84 ns (mean)
+  [0;32m✓[0m snid_to_wire_mat/snid_to_wire_mat: 212.01 ns (mean)
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.4317 ns (mean)
+  [0;32m✓[0m eid_from_parts/eid_from_parts: 779.21 ps (mean)
+  [0;32m✓[0m lid_from_parts/lid_from_parts: 602.96 ns (mean)
+  [0;32m✓[0m snid_to_uuid_string/snid_to_uuid_string: 29.274 ns (mean)
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.3216 ns (mean)
+  [0;32m✓[0m bid_parse_wire/bid_parse_wire: 206.59 ns (mean)
+  [0;32m✓[0m eid_to_bytes/eid_to_bytes: 1.5392 ns (mean)
+  [0;32m✓[0m eid_timestamp/eid_timestamp: 448.35 ps (mean)
+
+[0;36m════════════════════════════════════════════════════════════════[0m
+[0;34mReports generated:[0m
+  • JSON: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/benchmark_20260422_141729.json
+  • Summary: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/summary_20260422_141729.txt
+  • Raw log: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/raw_output_20260422_141729.log

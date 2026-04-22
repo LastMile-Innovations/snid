@@ -1,0 +1,104 @@
+{
+  "timestamp": "2026-04-22T14:16:23-07:00",
+  "elapsed_seconds": 219,
+  "benchmarks": [
+    {
+      "name": "snid_new_fast/snid_new_fast: Analyzing",
+      "value": 5.9495,
+      "unit": "ns",
+      "mean_seconds": .000000005949500
+    }
+,
+    {
+      "name": "snid_new_safe/snid_new_safe: Analyzing",
+      "value": 658.61,
+      "unit": "ns",
+      "mean_seconds": .000000658610000
+    }
+,
+    {
+      "name": "snid_to_wire_mat/snid_to_wire_mat: Analyzing",
+      "value": 219.91,
+      "unit": "ns",
+      "mean_seconds": .000000219910000
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance: Analyzing",
+      "value": 1.3456,
+      "unit": "ns",
+      "mean_seconds": .000000001345600
+    }
+,
+    {
+      "name": "eid_from_parts/eid_from_parts: Analyzing",
+      "value": 685.12,
+      "unit": "ps",
+      "mean_seconds": .000000000685120
+    }
+,
+    {
+      "name": "lid_from_parts/lid_from_parts: Analyzing",
+      "value": 595.68,
+      "unit": "ns",
+      "mean_seconds": .000000595680000
+    }
+,
+    {
+      "name": "snid_to_uuid_string/snid_to_uuid_string: Analyzing",
+      "value": 27.552,
+      "unit": "ns",
+      "mean_seconds": .000000027552000
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance: Analyzing",
+      "value": 1.3617,
+      "unit": "ns",
+      "mean_seconds": .000000001361700
+    }
+,
+    {
+      "name": "nid_batch_100/nid_batch_100: Analyzing",
+      "value": 356.81,
+      "unit": "ns",
+      "mean_seconds": .000000356810000
+    }
+,
+    {
+      "name": "bid_parse_wire/bid_parse_wire: Analyzing",
+      "value": 219.28,
+      "unit": "ns",
+      "mean_seconds": .000000219280000
+    }
+,
+    {
+      "name": "eid_to_bytes/eid_to_bytes: Analyzing",
+      "value": 1.5791,
+      "unit": "ns",
+      "mean_seconds": .000000001579100
+    }
+,
+    {
+      "name": "eid_timestamp/eid_timestamp: Analyzing",
+      "value": 433.08,
+      "unit": "ps",
+      "mean_seconds": .000000000433080
+    }
+,
+    {
+      "name": "eid_batch_100/eid_batch_100: Analyzing",
+      "value": 33.648,
+      "unit": "ns",
+      "mean_seconds": .000000033648000
+    }
+,
+    {
+      "name": "eid_batch_1000/eid_batch_1000: Analyzing",
+      "value": 312.68,
+      "unit": "ns",
+      "mean_seconds": .000000312680000
+    }
+
+  ]
+}

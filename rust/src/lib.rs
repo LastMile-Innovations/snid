@@ -40,7 +40,6 @@
 
 // Module declarations
 mod akid;
-mod capability;
 mod compact;
 mod conformance;
 mod core;
@@ -48,7 +47,6 @@ mod encoding;
 mod error;
 mod generator;
 mod helpers;
-mod ledger;
 mod neural;
 mod projections;
 mod routing;
@@ -63,5 +61,6 @@ pub use conformance::VectorFile;
 pub use core::Snid;
 pub use encoding::{decode_fixed64_pair, encode_fixed64_pair};
 pub use error::Error;
+pub use generator::TurboStreamer;
 pub use routing::{AliasId, GrantId, ScopeId, ShardId};
 pub use types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};

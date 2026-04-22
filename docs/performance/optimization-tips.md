@@ -6,6 +6,8 @@ Guidance for optimizing SNID performance in your applications.
 
 SNID is already highly optimized, but there are patterns to get the best performance:
 
+**Use first principles and critical deep thinking.** Question assumptions, derive from fundamentals, and don't accept "good enough" as an answer.
+
 - Use appropriate generation mode for your use case
 - Choose the right backend for batch generation
 - Avoid unnecessary encoding/decoding
@@ -52,6 +54,95 @@ let batch = Nid::batch_from_head(head, &semantic_hashes);
 - Batch operations improved 21-33% (nid_batch_100, nid_hamming_distance)
 - Reduces memory allocations in batch operations
 - Optimized hamming_distance uses direct byte comparison
+
+## Advanced Optimization Roadmap
+
+SNID's performance optimization is an ongoing journey. The following advanced optimizations are on our roadmap:
+
+### SIMD Base58 Encoding
+
+**Current State**: Base58 encoding uses 128-bit integer division with `bits.Div64` (Go) or similar approach (Rust). This is already optimized compared to byte-by-byte approaches (44 divisions vs 352).
+
+**Optimization Target**: Implement AVX-512 / NEON SIMD vectorized Base58 encoding/decoding for batch operations.
+
+**Implementation Guidance**:
+- Target batch encoding operations (encoding arrays of IDs) rather than single ID encoding
+- Use AVX-512 on x86-64, NEON on ARM64
+- Consider carry-less multiplication for division-by-58 operations
+- Benchmark against current 128-bit division approach
+- Maintain conformance with existing test vectors
+
+**Expected Impact**: Encode batch arrays in fewer CPU cycles by parallelizing the division operations.
+
+**Current Status**: Planned - see `go/encoding.go` and `rust/src/encoding.rs`
+
+### Fork-safe RNG Entropy
+
+**Current State**: RNG state is seeded at initialization using process-unique entropy (PID, timestamp, maphash).
+
+**Optimization Target**: Implement state-check counters to instantly detect a forked process in production.
+
+**Implementation Guidance**:
+- Add generation counter to each shard state
+- On each ID generation, validate counter against expected range
+- If counter indicates potential fork, re-seed RNG state immediately
+- Use atomic operations for counter checks to minimize overhead
+- Add fork detection tests to conformance suite
+
+**Expected Impact**: Prevent duplicate ID generation after fork events without performance penalty in normal operation.
+
+**Current Status**: Planned - see `go/generator.go` shard structures
+
+### Adaptive Cache-Line Padding
+
+**Current State**: Go implementations already use 64-byte padding on `shard`, `fastPShard`, `adaptiveShard`, and `alignedClock` structures.
+
+**Optimization Target**: Ensure Rust implementation has equivalent cache-line padding and validate multi-core scaling.
+
+**Implementation Guidance**:
+- Verify Rust generator state has 64-byte padding
+- Add cache-line padding benchmarks
+- Test with varying core counts (1, 2, 4, 8, 16, 32+)
+- Measure false-sharing using perf counters
+- Document padding strategy in architecture docs
+
+**Expected Impact**: Eliminate false-sharing cache thrashing in high-concurrency scenarios.
+
+**Current Status**: Partially complete in Go, needs Rust validation
+
+### Constant-time MAC tails
+
+**Current State**: KID and LID verification uses standard comparison operations.
+
+**Optimization Target**: Harden signature verification into constant-time comparisons to prevent timing-sidechannel attacks.
+
+**Implementation Guidance**:
+- Use `subtle.ConstantTimeCompare` in Go
+- Use `subtle` crate in Rust
+- Ensure all MAC verification paths are constant-time
+- Add timing attack resistance tests
+- Document security guarantees
+
+**Expected Impact**: Eliminate timing side-channel vulnerabilities in verification paths.
+
+**Current Status**: Planned - see `go/akid.go` and `rust/src/akid.rs`
+
+### PGO (Profile-Guided Optimization)
+
+**Current State**: Standard compiler optimizations used in release builds.
+
+**Optimization Target**: Generate PGO profiles during CI/CD benchmark runs and feed back into compiler.
+
+**Implementation Guidance**:
+- Add PGO profile collection to CI benchmark workflows
+- Run representative workloads (single ID, batch, concurrent)
+- Generate PGO profiles for Go (`go test -cpuprofile`) and Rust (`cargo-pgo`)
+- Integrate PGO into release build process
+- Document PGO workflow for contributors
+
+**Expected Impact**: Compiler optimizes hot loops for exact branch probabilities observed in production workloads.
+
+**Current Status**: Planned - see `.github/workflows/`
 
 ## Go Optimization
 

@@ -1,0 +1,360 @@
+    Finished `bench` profile [optimized] target(s) in 0.33s
+     Running benches/benchmarks.rs (target/release/deps/benchmarks-665416e4ab34a1fc)
+Benchmarking snid_new_fast/snid_new_fast
+Benchmarking snid_new_fast/snid_new_fast: Warming up for 3.0000 s
+Benchmarking snid_new_fast/snid_new_fast: Collecting 100 samples in estimated 5.0000 s (836M iterations)
+Benchmarking snid_new_fast/snid_new_fast: Analyzing
+snid_new_fast/snid_new_fast
+                        time:   [5.8524 ns 5.9495 ns 6.0679 ns]
+                        thrpt:  [164.80 Melem/s 168.08 Melem/s 170.87 Melem/s]
+                 change:
+                        time:   [-22.854% -12.689% -3.0687%] (p = 0.02 < 0.05)
+                        thrpt:  [+3.1659% +14.534% +29.624%]
+                        Performance has improved.
+Found 14 outliers among 100 measurements (14.00%)
+  5 (5.00%) high mild
+  9 (9.00%) high severe
+
+Benchmarking snid_new_safe/snid_new_safe
+Benchmarking snid_new_safe/snid_new_safe: Warming up for 3.0000 s
+Benchmarking snid_new_safe/snid_new_safe: Collecting 100 samples in estimated 5.0008 s (7.6M iterations)
+Benchmarking snid_new_safe/snid_new_safe: Analyzing
+snid_new_safe/snid_new_safe
+                        time:   [655.48 ns 658.61 ns 661.52 ns]
+                        thrpt:  [1.5117 Melem/s 1.5183 Melem/s 1.5256 Melem/s]
+                 change:
+                        time:   [-0.5697% +0.5966% +1.6967%] (p = 0.30 > 0.05)
+                        thrpt:  [-1.6684% -0.5931% +0.5730%]
+                        No change in performance detected.
+
+Benchmarking snid_to_wire_mat/snid_to_wire_mat
+Benchmarking snid_to_wire_mat/snid_to_wire_mat: Warming up for 3.0000 s
+Benchmarking snid_to_wire_mat/snid_to_wire_mat: Collecting 100 samples in estimated 5.0002 s (21M iterations)
+Benchmarking snid_to_wire_mat/snid_to_wire_mat: Analyzing
+snid_to_wire_mat/snid_to_wire_mat
+                        time:   [218.68 ns 219.91 ns 221.20 ns]
+                        thrpt:  [4.5208 Melem/s 4.5474 Melem/s 4.5730 Melem/s]
+                 change:
+                        time:   [+3.6786% +4.9007% +5.9751%] (p = 0.00 < 0.05)
+                        thrpt:  [-5.6382% -4.6717% -3.5480%]
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking nid_hamming_distance/nid_hamming_distance
+Benchmarking nid_hamming_distance/nid_hamming_distance: Warming up for 3.0000 s
+Benchmarking nid_hamming_distance/nid_hamming_distance: Collecting 100 samples in estimated 5.0000 s (3.8B iterations)
+Benchmarking nid_hamming_distance/nid_hamming_distance: Analyzing
+nid_hamming_distance/nid_hamming_distance
+                        time:   [1.3405 ns 1.3456 ns 1.3521 ns]
+                        thrpt:  [739.59 Melem/s 743.17 Melem/s 746.00 Melem/s]
+                 change:
+                        time:   [+0.2824% +0.8696% +1.4469%] (p = 0.00 < 0.05)
+                        thrpt:  [-1.4262% -0.8621% -0.2816%]
+                        Change within noise threshold.
+Found 12 outliers among 100 measurements (12.00%)
+  2 (2.00%) low mild
+  2 (2.00%) high mild
+  8 (8.00%) high severe
+
+Benchmarking bid_wire/bid_wire
+Benchmarking bid_wire/bid_wire: Warming up for 3.0000 s
+Benchmarking bid_wire/bid_wire: Collecting 100 samples in estimated 5.0019 s (12M iterations)
+Benchmarking bid_wire/bid_wire: Analyzing
+bid_wire/bid_wire       time:   [373.97 ns 379.57 ns 386.97 ns]
+                        thrpt:  [2.5842 Melem/s 2.6346 Melem/s 2.6740 Melem/s]
+                 change:
+                        time:   [-6.4389% -5.4960% -4.2082%] (p = 0.00 < 0.05)
+                        thrpt:  [+4.3931% +5.8157% +6.8821%]
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+
+Benchmarking eid_from_parts/eid_from_parts
+Benchmarking eid_from_parts/eid_from_parts: Warming up for 3.0000 s
+Benchmarking eid_from_parts/eid_from_parts: Collecting 100 samples in estimated 5.0000 s (7.4B iterations)
+Benchmarking eid_from_parts/eid_from_parts: Analyzing
+eid_from_parts/eid_from_parts
+                        time:   [677.97 ps 685.12 ps 693.95 ps]
+                        thrpt:  [1.4410 Gelem/s 1.4596 Gelem/s 1.4750 Gelem/s]
+                 change:
+                        time:   [-15.715% -10.926% -7.0661%] (p = 0.00 < 0.05)
+                        thrpt:  [+7.6034% +12.267% +18.645%]
+                        Performance has improved.
+Found 15 outliers among 100 measurements (15.00%)
+  5 (5.00%) low mild
+  3 (3.00%) high mild
+  7 (7.00%) high severe
+
+Benchmarking lid_from_parts/lid_from_parts
+Benchmarking lid_from_parts/lid_from_parts: Warming up for 3.0000 s
+Benchmarking lid_from_parts/lid_from_parts: Collecting 100 samples in estimated 5.0013 s (8.1M iterations)
+Benchmarking lid_from_parts/lid_from_parts: Analyzing
+lid_from_parts/lid_from_parts
+                        time:   [595.35 ns 595.68 ns 596.14 ns]
+                        thrpt:  [1.6774 Melem/s 1.6787 Melem/s 1.6797 Melem/s]
+                 change:
+                        time:   [-7.6394% -6.6130% -5.6627%] (p = 0.00 < 0.05)
+                        thrpt:  [+6.0026% +7.0813% +8.2713%]
+                        Performance has improved.
+Found 16 outliers among 100 measurements (16.00%)
+  2 (2.00%) low severe
+  1 (1.00%) low mild
+  6 (6.00%) high mild
+  7 (7.00%) high severe
+
+Benchmarking snid_to_uuid_string/snid_to_uuid_string
+Benchmarking snid_to_uuid_string/snid_to_uuid_string: Warming up for 3.0000 s
+Benchmarking snid_to_uuid_string/snid_to_uuid_string: Collecting 100 samples in estimated 5.0001 s (182M iterations)
+Benchmarking snid_to_uuid_string/snid_to_uuid_string: Analyzing
+snid_to_uuid_string/snid_to_uuid_string
+                        time:   [27.478 ns 27.552 ns 27.630 ns]
+                        thrpt:  [36.192 Melem/s 36.295 Melem/s 36.392 Melem/s]
+                 change:
+                        time:   [-18.330% -9.6779% -1.7634%] (p = 0.02 < 0.05)
+                        thrpt:  [+1.7951% +10.715% +22.444%]
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+    Finished `bench` profile [optimized] target(s) in 0.25s
+     Running benches/extended_families.rs (target/release/deps/extended_families-c702363fbc749968)
+Benchmarking nid_new/nid_new
+Benchmarking nid_new/nid_new: Warming up for 3.0000 s
+Benchmarking nid_new/nid_new: Collecting 100 samples in estimated 5.0000 s (544M iterations)
+Benchmarking nid_new/nid_new: Analyzing
+nid_new/nid_new         time:   [9.1174 ns 9.1248 ns 9.1343 ns]
+                        thrpt:  [109.48 Melem/s 109.59 Melem/s 109.68 Melem/s]
+                 change:
+                        time:   [-0.8820% -0.4841% -0.1736%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.1739% +0.4864% +0.8898%]
+                        Change within noise threshold.
+Found 11 outliers among 100 measurements (11.00%)
+  1 (1.00%) low severe
+  1 (1.00%) low mild
+  7 (7.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking nid_hamming_distance/nid_hamming_distance
+Benchmarking nid_hamming_distance/nid_hamming_distance: Warming up for 3.0000 s
+Benchmarking nid_hamming_distance/nid_hamming_distance: Collecting 100 samples in estimated 5.0000 s (3.8B iterations)
+Benchmarking nid_hamming_distance/nid_hamming_distance: Analyzing
+nid_hamming_distance/nid_hamming_distance
+                        time:   [1.3162 ns 1.3617 ns 1.4566 ns]
+                        thrpt:  [686.54 Melem/s 734.35 Melem/s 759.76 Melem/s]
+                 change:
+                        time:   [-2.1093% +0.7833% +5.7821%] (p = 0.82 > 0.05)
+                        thrpt:  [-5.4660% -0.7772% +2.1548%]
+                        No change in performance detected.
+Found 19 outliers among 100 measurements (19.00%)
+  1 (1.00%) low severe
+  3 (3.00%) low mild
+  5 (5.00%) high mild
+  10 (10.00%) high severe
+
+Benchmarking nid_batch_100/nid_batch_100
+Benchmarking nid_batch_100/nid_batch_100: Warming up for 3.0000 s
+Benchmarking nid_batch_100/nid_batch_100: Collecting 100 samples in estimated 5.0005 s (14M iterations)
+Benchmarking nid_batch_100/nid_batch_100: Analyzing
+nid_batch_100/nid_batch_100
+                        time:   [354.41 ns 356.81 ns 360.16 ns]
+                        thrpt:  [277.65 Melem/s 280.26 Melem/s 282.16 Melem/s]
+                 change:
+                        time:   [-2.8587% -1.3907% +0.3181%] (p = 0.09 > 0.05)
+                        thrpt:  [-0.3171% +1.4103% +2.9429%]
+                        No change in performance detected.
+Found 18 outliers among 100 measurements (18.00%)
+  1 (1.00%) low severe
+  2 (2.00%) low mild
+  2 (2.00%) high mild
+  13 (13.00%) high severe
+
+Benchmarking nid_batch_1000/nid_batch_1000
+Benchmarking nid_batch_1000/nid_batch_1000: Warming up for 3.0000 s
+Benchmarking nid_batch_1000/nid_batch_1000: Collecting 100 samples in estimated 5.0043 s (1.4M iterations)
+Benchmarking nid_batch_1000/nid_batch_1000: Analyzing
+nid_batch_1000/nid_batch_1000
+                        time:   [3.5472 µs 3.7151 µs 3.9896 µs]
+                        thrpt:  [250.65 Melem/s 269.17 Melem/s 281.92 Melem/s]
+                 change:
+                        time:   [-10.642% -4.6705% +1.8448%] (p = 0.18 > 0.05)
+                        thrpt:  [-1.8114% +4.8993% +11.909%]
+                        No change in performance detected.
+Found 17 outliers among 100 measurements (17.00%)
+  2 (2.00%) low mild
+  6 (6.00%) high mild
+  9 (9.00%) high severe
+
+Benchmarking lid_new/lid_new
+Benchmarking lid_new/lid_new: Warming up for 3.0000 s
+Benchmarking lid_new/lid_new: Collecting 100 samples in estimated 5.0027 s (8.3M iterations)
+Benchmarking lid_new/lid_new: Analyzing
+lid_new/lid_new         time:   [614.90 ns 625.23 ns 637.97 ns]
+                        thrpt:  [1.5675 Melem/s 1.5994 Melem/s 1.6263 Melem/s]
+                 change:
+                        time:   [-5.4041% -3.3792% -1.0462%] (p = 0.00 < 0.05)
+                        thrpt:  [+1.0572% +3.4974% +5.7128%]
+                        Performance has improved.
+Found 14 outliers among 100 measurements (14.00%)
+  8 (8.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking lid_head/lid_head
+Benchmarking lid_head/lid_head: Warming up for 3.0000 s
+Benchmarking lid_head/lid_head: Collecting 100 samples in estimated 5.0000 s (824M iterations)
+Benchmarking lid_head/lid_head: Analyzing
+lid_head/lid_head       time:   [6.0769 ns 6.3449 ns 6.7912 ns]
+                        thrpt:  [147.25 Melem/s 157.61 Melem/s 164.56 Melem/s]
+                 change:
+                        time:   [-12.507% -6.4142% -0.0425%] (p = 0.05 < 0.05)
+                        thrpt:  [+0.0425% +6.8538% +14.294%]
+                        Change within noise threshold.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking bid_new/bid_new
+Benchmarking bid_new/bid_new: Warming up for 3.0000 s
+Benchmarking bid_new/bid_new: Collecting 100 samples in estimated 5.0001 s (356M iterations)
+Benchmarking bid_new/bid_new: Analyzing
+bid_new/bid_new         time:   [13.304 ns 13.332 ns 13.366 ns]
+                        thrpt:  [74.816 Melem/s 75.009 Melem/s 75.164 Melem/s]
+                 change:
+                        time:   [-3.6452% -2.2144% -0.7925%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.7988% +2.2645% +3.7831%]
+                        Change within noise threshold.
+Found 18 outliers among 100 measurements (18.00%)
+  7 (7.00%) high mild
+  11 (11.00%) high severe
+
+Benchmarking bid_wire/bid_wire
+Benchmarking bid_wire/bid_wire: Warming up for 3.0000 s
+Benchmarking bid_wire/bid_wire: Collecting 100 samples in estimated 5.0017 s (12M iterations)
+Benchmarking bid_wire/bid_wire: Analyzing
+bid_wire/bid_wire       time:   [398.71 ns 418.95 ns 449.02 ns]
+                        thrpt:  [2.2271 Melem/s 2.3869 Melem/s 2.5081 Melem/s]
+                 change:
+                        time:   [+5.3736% +9.5045% +15.706%] (p = 0.00 < 0.05)
+                        thrpt:  [-13.574% -8.6796% -5.0996%]
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking bid_parse_wire/bid_parse_wire
+Benchmarking bid_parse_wire/bid_parse_wire: Warming up for 3.0000 s
+Benchmarking bid_parse_wire/bid_parse_wire: Collecting 100 samples in estimated 5.0002 s (23M iterations)
+Benchmarking bid_parse_wire/bid_parse_wire: Analyzing
+bid_parse_wire/bid_parse_wire
+                        time:   [216.80 ns 219.28 ns 222.18 ns]
+                        thrpt:  [4.5008 Melem/s 4.5603 Melem/s 4.6126 Melem/s]
+                 change:
+                        time:   [+6.5946% +9.6248% +13.942%] (p = 0.00 < 0.05)
+                        thrpt:  [-12.236% -8.7798% -6.1866%]
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  1 (1.00%) low mild
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking eid_new/eid_new
+Benchmarking eid_new/eid_new: Warming up for 3.0000 s
+Benchmarking eid_new/eid_new: Collecting 100 samples in estimated 5.0000 s (6.4B iterations)
+Benchmarking eid_new/eid_new: Analyzing
+eid_new/eid_new         time:   [714.62 ps 727.37 ps 742.87 ps]
+                        thrpt:  [1.3461 Gelem/s 1.3748 Gelem/s 1.3993 Gelem/s]
+                 change:
+                        time:   [+7.5824% +9.6517% +11.786%] (p = 0.00 < 0.05)
+                        thrpt:  [-10.543% -8.8021% -7.0480%]
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking eid_to_bytes/eid_to_bytes
+Benchmarking eid_to_bytes/eid_to_bytes: Warming up for 3.0000 s
+Benchmarking eid_to_bytes/eid_to_bytes: Collecting 100 samples in estimated 5.0000 s (3.1B iterations)
+Benchmarking eid_to_bytes/eid_to_bytes: Analyzing
+eid_to_bytes/eid_to_bytes
+                        time:   [1.5499 ns 1.5791 ns 1.6115 ns]
+                        thrpt:  [620.54 Melem/s 633.27 Melem/s 645.22 Melem/s]
+                 change:
+                        time:   [-10.470% -4.2457% +1.0336%] (p = 0.20 > 0.05)
+                        thrpt:  [-1.0230% +4.4340% +11.694%]
+                        No change in performance detected.
+Found 16 outliers among 100 measurements (16.00%)
+  6 (6.00%) high mild
+  10 (10.00%) high severe
+
+Benchmarking eid_counter/eid_counter
+Benchmarking eid_counter/eid_counter: Warming up for 3.0000 s
+Benchmarking eid_counter/eid_counter: Collecting 100 samples in estimated 5.0000 s (10B iterations)
+Benchmarking eid_counter/eid_counter: Analyzing
+eid_counter/eid_counter time:   [487.49 ps 492.48 ps 498.77 ps]
+                        thrpt:  [2.0049 Gelem/s 2.0306 Gelem/s 2.0513 Gelem/s]
+                 change:
+                        time:   [+2.4160% +3.4522% +4.7178%] (p = 0.00 < 0.05)
+                        thrpt:  [-4.5052% -3.3370% -2.3590%]
+                        Performance has regressed.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) low mild
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking eid_timestamp/eid_timestamp
+Benchmarking eid_timestamp/eid_timestamp: Warming up for 3.0000 s
+Benchmarking eid_timestamp/eid_timestamp: Collecting 100 samples in estimated 5.0000 s (11B iterations)
+Benchmarking eid_timestamp/eid_timestamp: Analyzing
+eid_timestamp/eid_timestamp
+                        time:   [428.72 ps 433.08 ps 438.23 ps]
+                        thrpt:  [2.2819 Gelem/s 2.3091 Gelem/s 2.3325 Gelem/s]
+                 change:
+                        time:   [+0.9652% +1.6424% +2.5724%] (p = 0.00 < 0.05)
+                        thrpt:  [-2.5078% -1.6159% -0.9560%]
+                        Change within noise threshold.
+Found 17 outliers among 100 measurements (17.00%)
+  7 (7.00%) high mild
+  10 (10.00%) high severe
+
+Benchmarking eid_batch_100/eid_batch_100
+Benchmarking eid_batch_100/eid_batch_100: Warming up for 3.0000 s
+Benchmarking eid_batch_100/eid_batch_100: Collecting 100 samples in estimated 5.0001 s (141M iterations)
+Benchmarking eid_batch_100/eid_batch_100: Analyzing
+eid_batch_100/eid_batch_100
+                        time:   [33.340 ns 33.648 ns 34.089 ns]
+                        thrpt:  [2.9335 Gelem/s 2.9719 Gelem/s 2.9994 Gelem/s]
+                 change:
+                        time:   [+2.4861% +3.8348% +5.2355%] (p = 0.00 < 0.05)
+                        thrpt:  [-4.9750% -3.6932% -2.4258%]
+                        Performance has regressed.
+Found 5 outliers among 100 measurements (5.00%)
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking eid_batch_1000/eid_batch_1000
+Benchmarking eid_batch_1000/eid_batch_1000: Warming up for 3.0000 s
+Benchmarking eid_batch_1000/eid_batch_1000: Collecting 100 samples in estimated 5.0010 s (16M iterations)
+Benchmarking eid_batch_1000/eid_batch_1000: Analyzing
+eid_batch_1000/eid_batch_1000
+                        time:   [312.01 ns 312.68 ns 313.04 ns]
+                        thrpt:  [3.1945 Gelem/s 3.1982 Gelem/s 3.2050 Gelem/s]
+                 change:
+                        time:   [-0.2407% -0.0131% +0.1922%] (p = 0.91 > 0.05)
+                        thrpt:  [-0.1919% +0.0131% +0.2413%]
+                        No change in performance detected.
+Found 13 outliers among 100 measurements (13.00%)
+  3 (3.00%) low severe
+  4 (4.00%) low mild
+  2 (2.00%) high mild
+  4 (4.00%) high severe
+
+    Finished `bench` profile [optimized] target(s) in 0.25s
+     Running benches/ecosystem_benchmarks.rs (target/release/deps/ecosystem_benchmarks-0f0b980cd561b736)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

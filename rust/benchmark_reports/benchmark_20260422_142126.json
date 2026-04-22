@@ -1,0 +1,177 @@
+{
+  "timestamp": "2026-04-22T14:25:06-07:00",
+  "elapsed_seconds": 220,
+  "benchmarks": [
+    {
+      "name": "snid_new_fast/snid_new_fast",
+      "value": 5.7460,
+      "unit": "ns",
+      "mean_seconds": .000000005746000,
+      "change": "",
+      "throughput": ""
+    }
+,
+    {
+      "name": "snid_new_safe/snid_new_safe",
+      "value": 624.48,
+      "unit": "ns",
+      "mean_seconds": .000000624480000,
+      "change": "improved",
+      "throughput": "174.03 Melem/s"
+    }
+,
+    {
+      "name": "snid_to_wire_mat/snid_to_wire_mat",
+      "value": 218.90,
+      "unit": "ns",
+      "mean_seconds": .000000218900000,
+      "change": "improved",
+      "throughput": "1.6013 Melem/s"
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance",
+      "value": 1.3409,
+      "unit": "ns",
+      "mean_seconds": .000000001340900,
+      "change": "no_change",
+      "throughput": "4.5683 Melem/s"
+    }
+,
+    {
+      "name": "bid_wire/bid_wire",
+      "value": 381.60,
+      "unit": "ns",
+      "mean_seconds": .000000381600000,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "eid_from_parts/eid_from_parts",
+      "value": 689.80,
+      "unit": "ps",
+      "mean_seconds": .000000000689800,
+      "change": "improved",
+      "throughput": "2.6205 Melem/s"
+    }
+,
+    {
+      "name": "lid_from_parts/lid_from_parts",
+      "value": 647.26,
+      "unit": "ns",
+      "mean_seconds": .000000647260000,
+      "change": "improved",
+      "throughput": "1.4497 Gelem/s"
+    }
+,
+    {
+      "name": "snid_to_uuid_string/snid_to_uuid_string",
+      "value": 29.343,
+      "unit": "ns",
+      "mean_seconds": .000000029343000,
+      "change": "regressed",
+      "throughput": "1.5450 Melem/s"
+    }
+,
+    {
+      "name": "nid_new/nid_new",
+      "value": 10.131,
+      "unit": "ns",
+      "mean_seconds": .000000010131000,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance",
+      "value": 1.4395,
+      "unit": "ns",
+      "mean_seconds": .000000001439500,
+      "change": "regressed",
+      "throughput": "98.712 Melem/s"
+    }
+,
+    {
+      "name": "lid_new/lid_new",
+      "value": 812.51,
+      "unit": "ns",
+      "mean_seconds": .000000812510000,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "lid_head/lid_head",
+      "value": 6.6252,
+      "unit": "ns",
+      "mean_seconds": .000000006625200,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "bid_new/bid_new",
+      "value": 15.368,
+      "unit": "ns",
+      "mean_seconds": .000000015368000,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "bid_wire/bid_wire",
+      "value": 400.08,
+      "unit": "ns",
+      "mean_seconds": .000000400080000,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "bid_parse_wire/bid_parse_wire",
+      "value": 210.93,
+      "unit": "ns",
+      "mean_seconds": .000000210930000,
+      "change": "regressed",
+      "throughput": "2.4995 Melem/s"
+    }
+,
+    {
+      "name": "eid_new/eid_new",
+      "value": 676.19,
+      "unit": "ps",
+      "mean_seconds": .000000000676190,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "eid_to_bytes/eid_to_bytes",
+      "value": 1.5503,
+      "unit": "ns",
+      "mean_seconds": .000000001550300,
+      "change": "no_change",
+      "throughput": "1.4789 Gelem/s"
+    }
+,
+    {
+      "name": "eid_counter/eid_counter",
+      "value": 476.64,
+      "unit": "ps",
+      "mean_seconds": .000000000476640,
+      "change": "unknown",
+      "throughput": ""
+    }
+,
+    {
+      "name": "eid_timestamp/eid_timestamp",
+      "value": 438.37,
+      "unit": "ps",
+      "mean_seconds": .000000000438370,
+      "change": "improved",
+      "throughput": "2.0980 Gelem/s"
+    }
+
+  ]
+}

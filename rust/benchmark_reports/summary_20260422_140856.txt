@@ -1,0 +1,8 @@
+
+
+
+[0;36m════════════════════════════════════════════════════════════════[0m
+[0;34mReports generated:[0m
+  • JSON: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/benchmark_20260422_140856.json
+  • Summary: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/summary_20260422_140856.txt
+  • Raw log: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/raw_output_20260422_140856.log

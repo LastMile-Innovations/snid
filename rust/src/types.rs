@@ -1,11 +1,11 @@
 //! Extended identifier families: Nid, Lid, Wid, Xid, Kid, Eid, Bid.
 
 use crate::core::Snid;
-use crate::encoding::encode_payload;
+use crate::encoding::{decode_base32_32, encode_base32_32_lower_to, encode_payload_to};
 use crate::error::Error;
-use base32::Alphabet;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use subtle::ConstantTimeEq;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -58,7 +58,7 @@ impl Nid {
     }
 
     #[inline(always)]
-    pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
+    pub fn to_tensor256_words(self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
             i64::from_be_bytes(self.0[8..16].try_into().unwrap()),
@@ -109,7 +109,7 @@ impl Lid {
         Snid(head)
     }
 
-    pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
+    pub fn to_tensor256_words(self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
             i64::from_be_bytes(self.0[8..16].try_into().unwrap()),
@@ -137,7 +137,7 @@ impl Wid {
         Snid(out)
     }
 
-    pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
+    pub fn to_tensor256_words(self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
             i64::from_be_bytes(self.0[8..16].try_into().unwrap()),
@@ -165,7 +165,7 @@ impl Xid {
         Snid(out)
     }
 
-    pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
+    pub fn to_tensor256_words(self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
             i64::from_be_bytes(self.0[8..16].try_into().unwrap()),
@@ -211,11 +211,11 @@ impl Kid {
 
     pub fn verify(&self, actor: Snid, resource: &[u8], capability: &[u8], key: &[u8]) -> bool {
         Self::from_parts(self.head(), actor, resource, capability, key)
-            .map(|expected| expected == *self)
+            .map(|expected| expected.0.ct_eq(&self.0).into())
             .unwrap_or(false)
     }
 
-    pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
+    pub fn to_tensor256_words(self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
             i64::from_be_bytes(self.0[8..16].try_into().unwrap()),
@@ -259,29 +259,47 @@ impl Bid {
     }
 
     pub fn wire(&self) -> Result<String, Error> {
-        let payload = encode_payload(self.topology.0);
-        let content =
-            base32::encode(Alphabet::Rfc4648 { padding: false }, &self.content).to_lowercase();
-        Ok(format!("CAS:{payload}:{content}"))
+        let mut out = [0u8; 81];
+        Ok(self.write_wire(&mut out)?.to_owned())
+    }
+
+    pub fn write_wire<'a>(&self, out: &'a mut [u8; 81]) -> Result<&'a str, Error> {
+        let mut payload = [0u8; 24];
+        let payload = encode_payload_to(self.topology.0, &mut payload);
+        let content_offset = 4 + payload.len() + 1;
+
+        out[..4].copy_from_slice(b"CAS:");
+        out[4..4 + payload.len()].copy_from_slice(payload.as_bytes());
+        out[4 + payload.len()] = b':';
+        let content_len = {
+            let content = encode_base32_32_lower_to(
+                &self.content,
+                (&mut out[content_offset..content_offset + 52])
+                    .try_into()
+                    .expect("fixed content buffer"),
+            );
+            content.len()
+        };
+        unsafe {
+            Ok(std::str::from_utf8_unchecked(
+                &out[..content_offset + content_len],
+            ))
+        }
+    }
+
+    pub fn append_wire(&self, out: &mut Vec<u8>) -> Result<(), Error> {
+        let mut encoded = [0u8; 81];
+        let encoded = self.write_wire(&mut encoded)?;
+        out.extend_from_slice(encoded.as_bytes());
+        Ok(())
     }
 
     pub fn parse_wire(value: &str) -> Result<Self, Error> {
-        let parts: Vec<_> = value.split(':').collect();
-        if parts.len() != 3 || parts[0] != "CAS" {
-            return Err(Error::InvalidFormat);
-        }
         use crate::encoding::decode_payload;
-        let topology = Snid(decode_payload(parts[1])?);
-        let content = base32::decode(
-            Alphabet::Rfc4648 { padding: false },
-            &parts[2].to_uppercase(),
-        )
-        .ok_or(Error::InvalidContentHash)?;
-        if content.len() != 32 {
-            return Err(Error::InvalidContentHash);
-        }
-        let mut out = [0u8; 32];
-        out.copy_from_slice(&content);
+        let rest = value.strip_prefix("CAS:").ok_or(Error::InvalidFormat)?;
+        let sep = rest.find(':').ok_or(Error::InvalidFormat)?;
+        let topology = Snid(decode_payload(&rest[..sep])?);
+        let out = decode_base32_32(&rest[sep + 1..]).map_err(|_| Error::InvalidContentHash)?;
         Ok(Self {
             topology,
             content: out,
@@ -289,7 +307,18 @@ impl Bid {
     }
 
     pub fn r2_key(&self) -> String {
-        base32::encode(Alphabet::Rfc4648 { padding: false }, &self.content).to_lowercase()
+        let mut out = [0u8; 52];
+        self.write_r2_key(&mut out).to_owned()
+    }
+
+    pub fn write_r2_key<'a>(&self, out: &'a mut [u8; 52]) -> &'a str {
+        encode_base32_32_lower_to(&self.content, out)
+    }
+
+    pub fn append_r2_key(&self, out: &mut Vec<u8>) {
+        let mut encoded = [0u8; 52];
+        let encoded = self.write_r2_key(&mut encoded);
+        out.extend_from_slice(encoded.as_bytes());
     }
 }
 
@@ -512,6 +541,17 @@ mod tests {
     }
 
     #[test]
+    fn test_kid_verify_wrong_key() {
+        let head = Snid::from_bytes([1u8; 16]);
+        let actor = Snid::from_bytes([2u8; 16]);
+        let resource = b"resource";
+        let capability = b"read";
+        let key = b"0123456789abcdef";
+        let kid = Kid::from_parts(head, actor, resource, capability, key).unwrap();
+        assert!(!kid.verify(actor, resource, capability, b"different-key"));
+    }
+
+    #[test]
     fn test_kid_to_tensor256_words() {
         let head = Snid::from_bytes([1u8; 16]);
         let actor = Snid::from_bytes([2u8; 16]);
@@ -579,6 +619,20 @@ mod tests {
     }
 
     #[test]
+    fn test_bid_write_wire_matches_wire() {
+        let topology = Snid::from_bytes([1u8; 16]);
+        let content = [2u8; 32];
+        let bid = Bid::from_parts(topology, content);
+        let mut out = [0u8; 81];
+        let written = bid.write_wire(&mut out).unwrap();
+        assert_eq!(written, bid.wire().unwrap());
+
+        let mut appended = Vec::new();
+        bid.append_wire(&mut appended).unwrap();
+        assert_eq!(appended, written.as_bytes());
+    }
+
+    #[test]
     fn test_bid_parse_wire() {
         let topology = Snid::from_bytes([1u8; 16]);
         let content = [2u8; 32];
@@ -602,5 +656,19 @@ mod tests {
         let bid = Bid::from_parts(topology, content);
         let r2_key = bid.r2_key();
         assert!(!r2_key.is_empty());
+    }
+
+    #[test]
+    fn test_bid_write_r2_key_matches_r2_key() {
+        let topology = Snid::from_bytes([1u8; 16]);
+        let content = [2u8; 32];
+        let bid = Bid::from_parts(topology, content);
+        let mut out = [0u8; 52];
+        let written = bid.write_r2_key(&mut out);
+        assert_eq!(written, bid.r2_key());
+
+        let mut appended = Vec::new();
+        bid.append_r2_key(&mut appended);
+        assert_eq!(appended, written.as_bytes());
     }
 }

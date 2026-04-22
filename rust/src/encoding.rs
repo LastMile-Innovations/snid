@@ -6,8 +6,50 @@ pub const BASE58_ALPHABET: &[u8; 58] =
     b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 // Crockford Base32 alphabet (case-insensitive, excludes I, L, O)
-pub const BASE32_CROCKFORD: &[u8; 32] =
-    b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+pub const BASE32_CROCKFORD: &[u8; 32] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+pub const RFC4648_BASE32_LOWER: &[u8; 32] = b"abcdefghijklmnopqrstuvwxyz234567";
+
+const BASE58_DECODE: [i8; 256] = build_decode_table(BASE58_ALPHABET);
+const BASE32_CROCKFORD_DECODE: [i8; 256] = build_crockford_decode_table();
+const RFC4648_BASE32_DECODE: [i8; 256] = build_rfc4648_base32_decode_table();
+
+const fn build_decode_table(alphabet: &[u8]) -> [i8; 256] {
+    let mut out = [-1i8; 256];
+    let mut idx = 0usize;
+    while idx < alphabet.len() {
+        out[alphabet[idx] as usize] = idx as i8;
+        idx += 1;
+    }
+    out
+}
+
+const fn build_crockford_decode_table() -> [i8; 256] {
+    let mut out = [-1i8; 256];
+    let mut idx = 0usize;
+    while idx < BASE32_CROCKFORD.len() {
+        let upper = BASE32_CROCKFORD[idx];
+        out[upper as usize] = idx as i8;
+        if upper >= b'A' && upper <= b'Z' {
+            out[(upper + 32) as usize] = idx as i8;
+        }
+        idx += 1;
+    }
+    out
+}
+
+const fn build_rfc4648_base32_decode_table() -> [i8; 256] {
+    let mut out = [-1i8; 256];
+    let mut idx = 0usize;
+    while idx < RFC4648_BASE32_LOWER.len() {
+        let lower = RFC4648_BASE32_LOWER[idx];
+        out[lower as usize] = idx as i8;
+        if lower >= b'a' && lower <= b'z' {
+            out[(lower - 32) as usize] = idx as i8;
+        }
+        idx += 1;
+    }
+    out
+}
 
 pub const CRC8_TABLE: [u8; 256] = [
     0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
@@ -29,6 +71,7 @@ pub const CRC8_TABLE: [u8; 256] = [
 ];
 
 #[inline(always)]
+#[allow(dead_code)]
 pub fn crc8(data: &[u8]) -> u8 {
     let mut crc = 0u8;
     for byte in data {
@@ -38,10 +81,36 @@ pub fn crc8(data: &[u8]) -> u8 {
 }
 
 #[inline(always)]
+pub fn crc8_16(data: &[u8; 16]) -> u8 {
+    let mut crc = 0u8;
+    crc = CRC8_TABLE[(crc ^ data[0]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[1]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[2]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[3]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[4]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[5]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[6]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[7]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[8]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[9]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[10]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[11]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[12]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[13]) as usize];
+    crc = CRC8_TABLE[(crc ^ data[14]) as usize];
+    CRC8_TABLE[(crc ^ data[15]) as usize]
+}
+
+#[inline(always)]
 pub fn encode_payload(bytes: [u8; 16]) -> String {
     let mut buf = [0u8; 24];
+    encode_payload_to(bytes, &mut buf).to_owned()
+}
+
+#[inline(always)]
+pub fn encode_payload_to(bytes: [u8; 16], buf: &mut [u8; 24]) -> &str {
     let mut idx = 23usize;
-    let checksum = crc8(&bytes);
+    let checksum = crc8_16(&bytes);
     buf[idx] = BASE58_ALPHABET[(checksum % 58) as usize];
     idx -= 1;
 
@@ -50,12 +119,10 @@ pub fn encode_payload(bytes: [u8; 16]) -> String {
     while hi > 0 || lo > 0 {
         let qhi = hi / 58;
         let rhi = hi - qhi * 58;
-        let dividend = ((rhi as u128) << 64) | lo as u128;
-        let qlo = (dividend / 58) as u64;
-        let rem = (dividend % 58) as usize;
+        let (qlo, rem) = div_rem_128_by_58(rhi, lo);
         hi = qhi;
         lo = qlo;
-        buf[idx] = BASE58_ALPHABET[rem];
+        buf[idx] = BASE58_ALPHABET[rem as usize];
         if idx == 0 {
             break;
         }
@@ -73,7 +140,7 @@ pub fn encode_payload(bytes: [u8; 16]) -> String {
             break;
         }
     }
-    String::from_utf8(buf[idx + 1..].to_vec()).unwrap()
+    unsafe { std::str::from_utf8_unchecked(&buf[idx + 1..]) }
 }
 
 #[inline(always)]
@@ -81,35 +148,46 @@ pub fn decode_payload(payload: &str) -> Result<[u8; 16], Error> {
     if payload.len() < 2 {
         return Err(Error::InvalidPayload);
     }
-    let (body, checksum_part) = payload.split_at(payload.len() - 1);
-    let mut out = [0u8; 16];
-    for ch in body.bytes() {
-        let value = BASE58_ALPHABET
-            .iter()
-            .position(|candidate| *candidate == ch)
-            .ok_or(Error::InvalidPayload)? as u32;
-        let mut carry = value;
-        for byte in out.iter_mut().rev() {
-            let res = (*byte as u32) * 58 + carry;
-            *byte = res as u8;
-            carry = res >> 8;
-        }
-        if carry > 0 {
+    let bytes = payload.as_bytes();
+    let (body, checksum_part) = bytes.split_at(bytes.len() - 1);
+    let mut decoded = 0u128;
+    for &ch in body {
+        let digit = BASE58_DECODE[ch as usize];
+        if digit < 0 {
             return Err(Error::InvalidPayload);
         }
+        decoded = decoded
+            .checked_mul(58)
+            .and_then(|next| next.checked_add(digit as u128))
+            .ok_or(Error::InvalidPayload)?;
     }
-    let expected = BASE58_ALPHABET[(crc8(&out) % 58) as usize] as char;
-    if checksum_part.chars().next() != Some(expected) {
+    let out = decoded.to_be_bytes();
+    let expected = BASE58_ALPHABET[(crc8_16(&out) % 58) as usize];
+    if checksum_part.first().copied() != Some(expected) {
         return Err(Error::ChecksumMismatch);
     }
     Ok(out)
 }
 
+#[inline(always)]
+pub fn decode_base58_value(byte: u8) -> Option<u8> {
+    let value = BASE58_DECODE[byte as usize];
+    if value < 0 {
+        None
+    } else {
+        Some(value as u8)
+    }
+}
+
 pub fn encode_base32(bytes: [u8; 16]) -> String {
     let mut buf = [0u8; 27]; // 26 chars for 128 bits + check digit
+    encode_base32_to(bytes, &mut buf).to_owned()
+}
+
+pub fn encode_base32_to(bytes: [u8; 16], buf: &mut [u8; 27]) -> &str {
     let mut idx = 26;
 
-    let checksum = crc8(&bytes);
+    let checksum = crc8_16(&bytes);
     buf[idx] = BASE32_CROCKFORD[(checksum % 32) as usize];
     idx -= 1;
 
@@ -117,11 +195,10 @@ pub fn encode_base32(bytes: [u8; 16]) -> String {
     let mut lo = u64::from_be_bytes(bytes[8..].try_into().unwrap());
 
     while hi > 0 || lo > 0 {
-        let qhi = hi / 32;
-        let rhi = hi - qhi * 32;
-        let dividend = ((rhi as u128) << 64) | lo as u128;
-        let qlo = (dividend / 32) as u64;
-        let rem = (dividend % 32) as usize;
+        let qhi = hi >> 5;
+        let rhi = hi & 31;
+        let qlo = (lo >> 5) | (rhi << 59);
+        let rem = (lo & 31) as usize;
         hi = qhi;
         lo = qlo;
         buf[idx] = BASE32_CROCKFORD[rem];
@@ -131,37 +208,200 @@ pub fn encode_base32(bytes: [u8; 16]) -> String {
         idx -= 1;
     }
 
-    String::from_utf8(buf[idx + 1..].to_vec()).unwrap()
+    unsafe { std::str::from_utf8_unchecked(&buf[idx + 1..]) }
 }
 
+#[inline(always)]
+fn div_rem_128_by_58(hi: u64, lo: u64) -> (u64, u64) {
+    debug_assert!(hi < 58);
+    let dividend = ((hi as u128) << 64) | lo as u128;
+    ((dividend / 58) as u64, (dividend % 58) as u64)
+}
+
+#[allow(dead_code)]
 pub fn decode_base32(payload: &str) -> Result<[u8; 16], Error> {
     // Remove check digit if present (last character)
-    let body = if payload.len() > 0 {
+    let body = if !payload.is_empty() {
         &payload[..payload.len() - 1]
     } else {
         return Err(Error::InvalidPayload);
     };
 
-    let mut out = [0u8; 16];
-    let mut hi: u64 = 0;
-    let mut lo: u64 = 0;
+    let mut value: u128 = 0;
 
+    // Process left-to-right (most significant digit first)
     for ch in body.bytes() {
-        let ch_upper = ch.to_ascii_uppercase();
-        let value = BASE32_CROCKFORD
-            .iter()
-            .position(|candidate| *candidate == ch_upper)
-            .ok_or(Error::InvalidPayload)? as u64;
+        let digit = BASE32_CROCKFORD_DECODE[ch as usize];
+        if digit < 0 {
+            return Err(Error::InvalidPayload);
+        }
 
-        // Multiply by 32 and add new digit
-        hi = hi.wrapping_mul(32).wrapping_add(lo >> 60);
-        lo = (lo << 5).wrapping_add(value);
+        value = value.wrapping_mul(32).wrapping_add(digit as u128);
     }
 
-    out[..8].copy_from_slice(&hi.to_be_bytes());
-    out[8..].copy_from_slice(&lo.to_be_bytes());
+    let mut out = [0u8; 16];
+    out[..8].copy_from_slice(&((value >> 64) as u64).to_be_bytes());
+    out[8..].copy_from_slice(&(value as u64).to_be_bytes());
 
     Ok(out)
+}
+
+#[allow(dead_code)]
+pub fn encode_base32_nopad_lower_to<'a>(bytes: &[u8], out: &'a mut [u8]) -> Result<&'a str, Error> {
+    let encoded_len = bytes.len().saturating_mul(8).div_ceil(5);
+    if out.len() < encoded_len {
+        return Err(Error::InvalidLength);
+    }
+
+    let mut buffer = 0u16;
+    let mut bits = 0u8;
+    let mut cursor = 0usize;
+    for byte in bytes {
+        buffer = (buffer << 8) | *byte as u16;
+        bits += 8;
+        while bits >= 5 {
+            let shift = bits - 5;
+            let idx = ((buffer >> shift) & 0x1F) as usize;
+            out[cursor] = RFC4648_BASE32_LOWER[idx];
+            cursor += 1;
+            bits -= 5;
+            buffer &= (1u16 << bits) - 1;
+        }
+    }
+    if bits > 0 {
+        let idx = ((buffer << (5 - bits)) & 0x1F) as usize;
+        out[cursor] = RFC4648_BASE32_LOWER[idx];
+        cursor += 1;
+    }
+
+    debug_assert_eq!(cursor, encoded_len);
+    unsafe { Ok(std::str::from_utf8_unchecked(&out[..cursor])) }
+}
+
+pub fn encode_base32_32_lower_to<'a>(bytes: &[u8; 32], out: &'a mut [u8; 52]) -> &'a str {
+    let mut src = 0usize;
+    let mut dst = 0usize;
+    for _ in 0..6 {
+        encode_base32_5(
+            bytes[src..src + 5].try_into().unwrap(),
+            &mut out[dst..dst + 8],
+        );
+        src += 5;
+        dst += 8;
+    }
+    let b0 = bytes[30];
+    let b1 = bytes[31];
+    out[48] = RFC4648_BASE32_LOWER[(b0 >> 3) as usize];
+    out[49] = RFC4648_BASE32_LOWER[(((b0 & 0x07) << 2) | (b1 >> 6)) as usize];
+    out[50] = RFC4648_BASE32_LOWER[((b1 >> 1) & 0x1F) as usize];
+    out[51] = RFC4648_BASE32_LOWER[((b1 & 0x01) << 4) as usize];
+    unsafe { std::str::from_utf8_unchecked(out) }
+}
+
+#[inline(always)]
+fn encode_base32_5(input: &[u8; 5], out: &mut [u8]) {
+    let b0 = input[0];
+    let b1 = input[1];
+    let b2 = input[2];
+    let b3 = input[3];
+    let b4 = input[4];
+    out[0] = RFC4648_BASE32_LOWER[(b0 >> 3) as usize];
+    out[1] = RFC4648_BASE32_LOWER[(((b0 & 0x07) << 2) | (b1 >> 6)) as usize];
+    out[2] = RFC4648_BASE32_LOWER[((b1 >> 1) & 0x1F) as usize];
+    out[3] = RFC4648_BASE32_LOWER[(((b1 & 0x01) << 4) | (b2 >> 4)) as usize];
+    out[4] = RFC4648_BASE32_LOWER[(((b2 & 0x0F) << 1) | (b3 >> 7)) as usize];
+    out[5] = RFC4648_BASE32_LOWER[((b3 >> 2) & 0x1F) as usize];
+    out[6] = RFC4648_BASE32_LOWER[(((b3 & 0x03) << 3) | (b4 >> 5)) as usize];
+    out[7] = RFC4648_BASE32_LOWER[(b4 & 0x1F) as usize];
+}
+
+pub fn decode_base32_32(input: &str) -> Result<[u8; 32], Error> {
+    if input.len() != 52 {
+        return Err(Error::InvalidContentHash);
+    }
+    let input = input.as_bytes();
+    let mut out = [0u8; 32];
+    let mut src = 0usize;
+    let mut dst = 0usize;
+    for _ in 0..6 {
+        decode_base32_8(&input[src..src + 8], &mut out[dst..dst + 5])?;
+        src += 8;
+        dst += 5;
+    }
+
+    let a = decode_rfc4648(input[48])?;
+    let b = decode_rfc4648(input[49])?;
+    let c = decode_rfc4648(input[50])?;
+    let d = decode_rfc4648(input[51])?;
+    if d & 0x0F != 0 {
+        return Err(Error::InvalidPayload);
+    }
+    out[30] = (a << 3) | (b >> 2);
+    out[31] = ((b & 0x03) << 6) | (c << 1) | (d >> 4);
+    Ok(out)
+}
+
+#[inline(always)]
+fn decode_base32_8(input: &[u8], out: &mut [u8]) -> Result<(), Error> {
+    let a = decode_rfc4648(input[0])?;
+    let b = decode_rfc4648(input[1])?;
+    let c = decode_rfc4648(input[2])?;
+    let d = decode_rfc4648(input[3])?;
+    let e = decode_rfc4648(input[4])?;
+    let f = decode_rfc4648(input[5])?;
+    let g = decode_rfc4648(input[6])?;
+    let h = decode_rfc4648(input[7])?;
+    out[0] = (a << 3) | (b >> 2);
+    out[1] = ((b & 0x03) << 6) | (c << 1) | (d >> 4);
+    out[2] = ((d & 0x0F) << 4) | (e >> 1);
+    out[3] = ((e & 0x01) << 7) | (f << 2) | (g >> 3);
+    out[4] = ((g & 0x07) << 5) | h;
+    Ok(())
+}
+
+#[inline(always)]
+fn decode_rfc4648(byte: u8) -> Result<u8, Error> {
+    let value = RFC4648_BASE32_DECODE[byte as usize];
+    if value < 0 {
+        Err(Error::InvalidPayload)
+    } else {
+        Ok(value as u8)
+    }
+}
+
+#[allow(dead_code)]
+pub fn decode_base32_nopad(input: &str, out: &mut [u8]) -> Result<usize, Error> {
+    let expected_len = input.len().saturating_mul(5) / 8;
+    if out.len() < expected_len {
+        return Err(Error::InvalidLength);
+    }
+
+    let mut buffer = 0u16;
+    let mut bits = 0u8;
+    let mut cursor = 0usize;
+    for byte in input.bytes() {
+        if byte == b'=' {
+            return Err(Error::InvalidPayload);
+        }
+        let value = decode_rfc4648(byte)?;
+        buffer = (buffer << 5) | value as u16;
+        bits += 5;
+        if bits >= 8 {
+            let shift = bits - 8;
+            if cursor >= out.len() {
+                return Err(Error::InvalidLength);
+            }
+            out[cursor] = (buffer >> shift) as u8;
+            cursor += 1;
+            bits -= 8;
+            buffer &= (1u16 << bits) - 1;
+        }
+    }
+
+    if bits > 0 && buffer != 0 {
+        return Err(Error::InvalidPayload);
+    }
+    Ok(cursor)
 }
 
 #[test]
@@ -194,6 +434,18 @@ fn test_decode_base32_case_insensitive() {
     let decoded_upper = decode_base32(&encoded).unwrap();
     let decoded_lower = decode_base32(&encoded.to_lowercase()).unwrap();
     assert_eq!(decoded_upper, decoded_lower);
+}
+
+#[test]
+fn test_rfc4648_base32_nopad_roundtrip() {
+    let bytes = [0x42u8; 32];
+    let mut encoded = [0u8; 52];
+    let encoded = encode_base32_nopad_lower_to(&bytes, &mut encoded).unwrap();
+    assert_eq!(encoded.len(), 52);
+    let mut decoded = [0u8; 32];
+    let len = decode_base32_nopad(encoded, &mut decoded).unwrap();
+    assert_eq!(len, 32);
+    assert_eq!(decoded, bytes);
 }
 
 pub fn encode_fixed64_pair(hi: i64, lo: i64) -> [u8; 16] {

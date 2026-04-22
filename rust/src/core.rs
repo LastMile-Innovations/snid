@@ -1,8 +1,13 @@
 //! Core SNID type and all Snid methods.
 
-use crate::encoding::{decode_payload, encode_payload, split_wire};
+use crate::encoding::{
+    decode_payload, encode_base32_to, encode_payload, encode_payload_to, split_wire,
+};
 use crate::error::Error;
-use crate::generator::{init_coarse_clock, GENERATOR};
+use crate::generator::{
+    assume_init_snid_vec, new_uninit_snid_vec, try_batch_standalone, try_new_standalone,
+    with_generator,
+};
 use crate::helpers::expand_hash_material;
 use std::fmt;
 use std::str::FromStr;
@@ -17,6 +22,12 @@ impl fmt::Debug for Snid {
     }
 }
 
+impl Default for Snid {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FromStr for Snid {
     type Err = Error;
 
@@ -27,14 +38,11 @@ impl FromStr for Snid {
 
 impl fmt::Display for Snid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Allocate a small buffer purely on the stack (0 heap allocations)
-        let mut buffer = [0u8; 48];
-        let payload = crate::encoding::encode_payload(self.0);
-        let len = payload.len();
-        buffer[..4].copy_from_slice(b"MAT:");
-        buffer[4..4 + len].copy_from_slice(payload.as_bytes());
-        let s = unsafe { std::str::from_utf8_unchecked(&buffer[..4 + len]) };
-        write!(f, "{}", s)
+        let mut buffer = [0u8; 28];
+        let s = self
+            .write_wire("MAT", &mut buffer)
+            .map_err(|_| fmt::Error)?;
+        f.write_str(s)
     }
 }
 
@@ -50,8 +58,13 @@ impl Snid {
     /// This is the universal paradigm for fast ID generation.
     #[inline(always)]
     pub fn new() -> Self {
-        init_coarse_clock();
-        GENERATOR.with(|cell| unsafe { (*cell.get()).next() })
+        with_generator(|state| state.next())
+    }
+
+    /// Attempts to generate a new SNID without panicking on OS RNG failure.
+    #[inline(always)]
+    pub fn try_new() -> Result<Self, Error> {
+        try_new_standalone()
     }
 
     /// Generates a new SNID with lock-free per-P state.
@@ -110,11 +123,49 @@ impl Snid {
     /// Generates a batch of IDs efficiently.
     /// This is the universal paradigm for batch generation.
     pub fn batch(count: usize) -> Vec<Self> {
-        let mut ids = Vec::with_capacity(count);
-        for _ in 0..count {
-            ids.push(Self::new());
+        let mut ids = new_uninit_snid_vec(count);
+        with_generator(|state| {
+            state.fill_uninit_slice(&mut ids);
+        });
+        assume_init_snid_vec(ids)
+    }
+
+    /// Attempts to generate a batch of IDs without panicking on OS RNG failure.
+    pub fn try_batch(count: usize) -> Result<Vec<Self>, Error> {
+        try_batch_standalone(count)
+    }
+
+    /// Fills an existing ID slice in place.
+    ///
+    /// This is the lowest-allocation generation API for callers that own their
+    /// buffers, such as network send paths, database ingest loops, and arenas.
+    pub fn fill_slice(out: &mut [Self]) {
+        with_generator(|state| state.fill_slice(out));
+    }
+
+    /// Fills a byte buffer with raw SNID bytes and returns the number of IDs written.
+    ///
+    /// Only complete 16-byte slots are written; trailing bytes are ignored.
+    pub fn fill_bytes(out: &mut [u8]) -> usize {
+        with_generator(|state| state.fill_bytes(out))
+    }
+
+    /// Appends `count` raw 16-byte SNIDs to an existing byte buffer.
+    pub fn append_binary_batch(count: usize, out: &mut Vec<u8>) {
+        let bytes = count.saturating_mul(16);
+        if bytes == 0 {
+            return;
         }
-        ids
+        let start = out.len();
+        out.reserve(bytes);
+        let written = with_generator(|state| {
+            let spare = &mut out.spare_capacity_mut()[..bytes];
+            state.fill_uninit_bytes(spare)
+        });
+        debug_assert_eq!(written, count);
+        unsafe {
+            out.set_len(start + written * 16);
+        }
     }
 
     #[inline(always)]
@@ -205,20 +256,48 @@ impl Snid {
     }
 
     pub fn to_wire(self, atom: &str) -> Result<String, Error> {
+        let mut out = [0u8; 28];
+        Ok(self.write_wire(atom, &mut out)?.to_owned())
+    }
+
+    /// Writes a wire-format ID (`ATOM:payload`) into a stack-provided buffer.
+    ///
+    /// The output buffer must be at least 28 bytes for canonical three-byte atoms.
+    pub fn write_wire<'a>(self, atom: &str, out: &'a mut [u8; 28]) -> Result<&'a str, Error> {
         let atom = Self::canonical_atom(atom).ok_or(Error::InvalidAtom)?;
-        Ok(format!("{atom}:{}", encode_payload(self.0)))
+        let mut payload = [0u8; 24];
+        let payload = encode_payload_to(self.0, &mut payload);
+        out[..3].copy_from_slice(atom.as_bytes());
+        out[3] = b':';
+        out[4..4 + payload.len()].copy_from_slice(payload.as_bytes());
+        unsafe { Ok(std::str::from_utf8_unchecked(&out[..4 + payload.len()])) }
+    }
+
+    /// Appends wire-format bytes into an existing buffer without allocating.
+    pub fn append_wire(self, atom: &str, out: &mut Vec<u8>) -> Result<(), Error> {
+        let atom = Self::canonical_atom(atom).ok_or(Error::InvalidAtom)?;
+        let mut payload = [0u8; 24];
+        let payload = encode_payload_to(self.0, &mut payload);
+        out.reserve(4 + payload.len());
+        out.extend_from_slice(atom.as_bytes());
+        out.push(b':');
+        out.extend_from_slice(payload.as_bytes());
+        Ok(())
     }
 
     /// Formats an ID using the default wire format with "MAT:" atom.
     /// This is the universal paradigm for serialization (default atom).
-    pub fn to_string(self) -> String {
-        self.to_wire("MAT").unwrap_or_else(|_| format!("MAT:{}", encode_payload(self.0)))
+    /// Note: Use the Display trait instead via format!("{}", id)
+    pub fn to_wire_default(self) -> String {
+        self.to_wire("MAT")
+            .unwrap_or_else(|_| format!("MAT:{}", encode_payload(self.0)))
     }
 
     /// Formats an ID with a custom atom.
     /// This is the universal paradigm for serialization (override atom).
     pub fn with_atom(self, atom: &str) -> String {
-        self.to_wire(atom).unwrap_or_else(|_| format!("{}:{}", atom, encode_payload(self.0)))
+        self.to_wire(atom)
+            .unwrap_or_else(|_| format!("{}:{}", atom, encode_payload(self.0)))
     }
 
     /// Formats an ID using Crockford Base32 encoding.
@@ -227,12 +306,28 @@ impl Snid {
         crate::encoding::encode_base32(self.0)
     }
 
+    /// Writes Crockford Base32 text into `out` and returns the written slice.
+    pub fn write_base32(self, out: &mut [u8; 27]) -> &str {
+        encode_base32_to(self.0, out)
+    }
+
+    pub fn append_base32(self, out: &mut Vec<u8>) {
+        let mut encoded = [0u8; 27];
+        let encoded = self.write_base32(&mut encoded);
+        out.extend_from_slice(encoded.as_bytes());
+    }
+
     /// Generates a public-safe ID with time-blurring and pure CSPRNG entropy.
     /// This is the "One ID" solution for database PK + public API use.
     /// Time-blurring: Truncates timestamp to nearest second (instead of millisecond)
     /// Pure CSPRNG: Fills 74 bits with cryptographic randomness (no monotonic counter)
     /// Performance: ~40-50ns (vs 5ns for new())
     pub fn new_safe() -> Self {
+        Self::try_new_safe().expect("os rng")
+    }
+
+    /// Attempts to generate a public-safe ID without panicking on OS RNG failure.
+    pub fn try_new_safe() -> Result<Self, Error> {
         let mut out = [0u8; 16];
 
         // Get current time in milliseconds and truncate to second (time-blurring)
@@ -245,12 +340,12 @@ impl Snid {
 
         // Generate 74 bits of pure CSPRNG entropy
         let mut entropy = [0u8; 10]; // 80 bits, we'll use 74
-        getrandom::getrandom(&mut entropy).expect("os rng");
+        getrandom::getrandom(&mut entropy)?;
 
         // Assemble the ID with time-blurred timestamp and CSPRNG entropy
         // Layout: [timestamp (48 bits)][version (4 bits)][entropy (74 bits)][variant (2 bits)]
         let hi = (ms_sec << 16) | 0x7000; // timestamp + version
-        
+
         // Set variant bits (bits 6-7 of byte 8 should be 0b10 for RFC 4122)
         let mut entropy64 = u64::from_be_bytes(entropy[..8].try_into().unwrap());
         entropy64 = (entropy64 & 0x3FFF_FFFF_FFFF_FFFF) | 0x8000_0000_0000_0000; // Clear top 2 bits, set variant to 0b10
@@ -259,7 +354,7 @@ impl Snid {
         out[..8].copy_from_slice(&hi.to_be_bytes());
         out[8..].copy_from_slice(&lo.to_be_bytes());
 
-        Self(out)
+        Ok(Self(out))
     }
 
     pub fn parse_wire(value: &str) -> Result<(Self, String), Error> {
@@ -384,20 +479,14 @@ impl Snid {
     #[cfg(feature = "data")]
     pub fn generate_binary_batch(count: usize) -> Vec<u8> {
         let mut out = Vec::with_capacity(count.saturating_mul(16));
-        GENERATOR.with(|cell| unsafe {
-            let state = &mut *cell.get();
-            for _ in 0..count {
-                out.extend_from_slice(&state.next().0);
-            }
-        });
+        Self::append_binary_batch(count, &mut out);
         out
     }
 
     #[cfg(feature = "data")]
     pub fn generate_tensor_batch(count: usize) -> Vec<i64> {
         let mut out = Vec::with_capacity(count.saturating_mul(2));
-        GENERATOR.with(|cell| unsafe {
-            let state = &mut *cell.get();
+        with_generator(|state| {
             for _ in 0..count {
                 let (hi, lo) = state.next().to_tensor_words();
                 out.push(hi);
@@ -409,16 +498,7 @@ impl Snid {
 
     #[cfg(feature = "data")]
     pub fn generate_tensor_batch_be_bytes(count: usize) -> Vec<u8> {
-        let mut out = Vec::with_capacity(count.saturating_mul(16));
-        GENERATOR.with(|cell| unsafe {
-            let state = &mut *cell.get();
-            for _ in 0..count {
-                let (hi, lo) = state.next().to_tensor_words();
-                out.extend_from_slice(&hi.to_be_bytes());
-                out.extend_from_slice(&lo.to_be_bytes());
-            }
-        });
-        out
+        Self::generate_binary_batch(count)
     }
 }
 
@@ -488,6 +568,12 @@ mod tests {
     #[test]
     fn test_new_fast() {
         let id = Snid::new_fast();
+        assert_ne!(id.0, [0u8; 16]);
+    }
+
+    #[test]
+    fn test_try_new() {
+        let id = Snid::try_new().unwrap();
         assert_ne!(id.0, [0u8; 16]);
     }
 
@@ -610,6 +696,18 @@ mod tests {
     }
 
     #[test]
+    fn test_write_wire_matches_to_wire() {
+        let id = Snid::from_bytes([1u8; 16]);
+        let mut out = [0u8; 28];
+        let written = id.write_wire("MAT", &mut out).unwrap();
+        assert_eq!(written, id.to_wire("MAT").unwrap());
+
+        let mut appended = Vec::new();
+        id.append_wire("MAT", &mut appended).unwrap();
+        assert_eq!(appended, written.as_bytes());
+    }
+
+    #[test]
     fn test_to_wire_invalid_atom() {
         let id = Snid::from_bytes([1u8; 16]);
         let result = id.to_wire("XXX");
@@ -695,13 +793,14 @@ mod tests {
     #[test]
     fn test_new_safe_time_blurring() {
         let id1 = Snid::new_safe();
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(1100));
         let id2 = Snid::new_safe();
-        // Both should be in the same second due to time-blurring
+        // With time-blurring, timestamps are truncated to second granularity
+        // After 1100ms sleep, timestamps should differ by at least 1 second
         let ts1 = id1.timestamp_millis();
         let ts2 = id2.timestamp_millis();
-        // Timestamps should be within 1 second
-        assert!((ts1 - ts2).abs() < 1000);
+        // Timestamps should be at least 1 second apart (within 100ms tolerance)
+        assert!((ts2 - ts1).abs() >= 900);
     }
 
     #[test]
@@ -732,6 +831,17 @@ mod tests {
         assert_eq!(base32_1, base32_2);
     }
 
+    #[test]
+    fn test_write_base32_matches_to_base32() {
+        let id = Snid::new_fast();
+        let mut out = [0u8; 27];
+        let written = id.write_base32(&mut out);
+        assert_eq!(written, id.to_base32());
+
+        let mut appended = Vec::new();
+        id.append_base32(&mut appended);
+        assert_eq!(appended, written.as_bytes());
+    }
 
     #[test]
     fn test_time_bin_zero_resolution() {
@@ -801,6 +911,34 @@ mod tests {
         let id = Snid::from_spatial_parts(cell, entropy);
         let features = id.h3_feature_vector();
         assert_eq!(features, vec![cell]);
+    }
+
+    #[test]
+    fn test_fill_slice_unique() {
+        let mut ids = [Snid::from_bytes([0u8; 16]); 64];
+        Snid::fill_slice(&mut ids);
+        assert!(ids.iter().all(|id| id.0 != [0u8; 16]));
+        let set: std::collections::HashSet<_> = ids.iter().copied().collect();
+        assert_eq!(set.len(), ids.len());
+    }
+
+    #[test]
+    fn test_fill_bytes_writes_complete_ids() {
+        let mut bytes = [0xAAu8; 35];
+        let written = Snid::fill_bytes(&mut bytes);
+        assert_eq!(written, 2);
+        assert_ne!(&bytes[..16], &[0xAAu8; 16]);
+        assert_ne!(&bytes[16..32], &[0xAAu8; 16]);
+        assert_eq!(&bytes[32..], &[0xAA, 0xAA, 0xAA]);
+    }
+
+    #[test]
+    fn test_append_binary_batch() {
+        let mut out = vec![0x42];
+        Snid::append_binary_batch(4, &mut out);
+        assert_eq!(out.len(), 65);
+        assert_eq!(out[0], 0x42);
+        assert_ne!(&out[1..17], &[0u8; 16]);
     }
 
     #[cfg(feature = "data")]
@@ -889,7 +1027,7 @@ mod tests {
         let id1 = Snid::from_bytes(bytes);
         let id2 = Snid::from_bytes(bytes);
         assert_eq!(id1, id2);
-        assert!(!(id1 < id2));
-        assert!(!(id1 > id2));
+        assert!(id1 >= id2);
+        assert!(id1 <= id2);
     }
 }

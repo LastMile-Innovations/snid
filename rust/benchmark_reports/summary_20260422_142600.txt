@@ -1,0 +1,52 @@
+
+
+  [0;32m✓[0m snid_new_fast/snid_new_fast: 6.3451 ns (mean) [0;36m?[0m 
+  [0;32m✓[0m snid_new_safe/snid_new_safe: 737.21 ns (mean) [0;31m↓[0m 157.60 Melem/s
+  [0;32m✓[0m snid_to_wire_mat/snid_to_wire_mat: 235.95 ns (mean) [0;31m↓[0m 1.3565 Melem/s
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.5426 ns (mean) [0;31m↓[0m 4.2382 Melem/s
+  [0;32m✓[0m bid_wire/bid_wire: 408.58 ns (mean) [0;36m?[0m
+  [0;32m✓[0m eid_from_parts/eid_from_parts: 742.07 ps (mean) [0;31m↓[0m 2.4475 Melem/s
+  [0;32m✓[0m lid_from_parts/lid_from_parts: 605.46 ns (mean) [0;31m↓[0m 1.3476 Gelem/s
+  [0;32m✓[0m snid_to_uuid_string/snid_to_uuid_string: 29.454 ns (mean) [0;32m↑[0m 1.6516 Melem/s
+  [0;32m✓[0m nid_new/nid_new: 9.1719 ns (mean) [0;36m?[0m
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.3726 ns (mean) [0;32m↑[0m 109.03 Melem/s
+  [0;32m✓[0m lid_new/lid_new: 648.11 ns (mean) [0;36m?[0m
+  [0;32m✓[0m lid_head/lid_head: 6.1601 ns (mean) [0;36m?[0m
+  [0;32m✓[0m bid_new/bid_new: 14.207 ns (mean) [0;36m?[0m
+  [0;32m✓[0m bid_wire/bid_wire: 516.50 ns (mean) [0;36m?[0m
+  [0;32m✓[0m bid_parse_wire/bid_parse_wire: 217.25 ns (mean) [0;31m↓[0m 1.9361 Melem/s
+  [0;32m✓[0m eid_new/eid_new: 793.46 ps (mean) [0;36m?[0m
+  [0;32m✓[0m eid_to_bytes/eid_to_bytes: 1.8570 ns (mean) [0;31m↓[0m 1.2603 Gelem/s
+  [0;32m✓[0m eid_counter/eid_counter: 489.45 ps (mean) [0;36m?[0m
+  [0;32m✓[0m eid_timestamp/eid_timestamp: 447.19 ps (mean) [0;36m~[0m 2.0431 Gelem/s
+
+[0;36m════════════════════════════════════════════════════════════════[0m
+[0;34mPerformance Summary Table:[0m
+
+Benchmark                                        Mean Time   Throughput     Change
+---------                                        ---------    ---------     ------
+snid_new_fast/snid_new_fast                       6.3451 ns          N/A          ?
+snid_new_safe/snid_new_safe                       737.21 ns 157.60 Melem/s        ↓
+snid_to_wire_mat/snid_to_wire_mat                 235.95 ns 1.3565 Melem/s        ↓
+nid_hamming_distance/nid_hamming_distance         1.5426 ns 4.2382 Melem/s        ↓
+bid_wire/bid_wire                                 408.58 ns          N/A          ?
+eid_from_parts/eid_from_parts                     742.07 ps 2.4475 Melem/s        ↓
+lid_from_parts/lid_from_parts                     605.46 ns 1.3476 Gelem/s        ↓
+snid_to_uuid_string/snid_to_uuid_string           29.454 ns 1.6516 Melem/s        ↑
+nid_new/nid_new                                   9.1719 ns          N/A          ?
+nid_hamming_distance/nid_hamming_distance         1.3726 ns 109.03 Melem/s        ↑
+lid_new/lid_new                                   648.11 ns          N/A          ?
+lid_head/lid_head                                 6.1601 ns          N/A          ?
+bid_new/bid_new                                   14.207 ns          N/A          ?
+bid_wire/bid_wire                                 516.50 ns          N/A          ?
+bid_parse_wire/bid_parse_wire                     217.25 ns 1.9361 Melem/s        ↓
+eid_new/eid_new                                   793.46 ps          N/A          ?
+eid_to_bytes/eid_to_bytes                         1.8570 ns 1.2603 Gelem/s        ↓
+eid_counter/eid_counter                           489.45 ps          N/A          ?
+eid_timestamp/eid_timestamp                       447.19 ps 2.0431 Gelem/s          ~
+
+[0;36m════════════════════════════════════════════════════════════════[0m
+[0;34mReports generated:[0m
+  • JSON: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/benchmark_20260422_142600.json
+  • Summary: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/summary_20260422_142600.txt
+  • Raw log: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/raw_output_20260422_142600.log

@@ -1,0 +1,27 @@
+
+
+  [0;32m✓[0m snid_new_fast/snid_new_fast: 5.7460 ns (mean) [0;36m~[0m 
+  [0;32m✓[0m snid_new_safe/snid_new_safe: 624.48 ns (mean) [0;32m↑[0m 174.03 Melem/s
+  [0;32m✓[0m snid_to_wire_mat/snid_to_wire_mat: 218.90 ns (mean) [0;32m↑[0m 1.6013 Melem/s
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.3409 ns (mean) [1;33m→[0m 4.5683 Melem/s
+  [0;32m✓[0m bid_wire/bid_wire: 381.60 ns (mean) [0;36m~[0m
+  [0;32m✓[0m eid_from_parts/eid_from_parts: 689.80 ps (mean) [0;32m↑[0m 2.6205 Melem/s
+  [0;32m✓[0m lid_from_parts/lid_from_parts: 647.26 ns (mean) [0;32m↑[0m 1.4497 Gelem/s
+  [0;32m✓[0m snid_to_uuid_string/snid_to_uuid_string: 29.343 ns (mean) [0;31m↓[0m 1.5450 Melem/s
+  [0;32m✓[0m nid_new/nid_new: 10.131 ns (mean) [0;36m~[0m
+  [0;32m✓[0m nid_hamming_distance/nid_hamming_distance: 1.4395 ns (mean) [0;31m↓[0m 98.712 Melem/s
+  [0;32m✓[0m lid_new/lid_new: 812.51 ns (mean) [0;36m~[0m
+  [0;32m✓[0m lid_head/lid_head: 6.6252 ns (mean) [0;36m~[0m
+  [0;32m✓[0m bid_new/bid_new: 15.368 ns (mean) [0;36m~[0m
+  [0;32m✓[0m bid_wire/bid_wire: 400.08 ns (mean) [0;36m~[0m
+  [0;32m✓[0m bid_parse_wire/bid_parse_wire: 210.93 ns (mean) [0;31m↓[0m 2.4995 Melem/s
+  [0;32m✓[0m eid_new/eid_new: 676.19 ps (mean) [0;36m~[0m
+  [0;32m✓[0m eid_to_bytes/eid_to_bytes: 1.5503 ns (mean) [1;33m→[0m 1.4789 Gelem/s
+  [0;32m✓[0m eid_counter/eid_counter: 476.64 ps (mean) [0;36m~[0m
+  [0;32m✓[0m eid_timestamp/eid_timestamp: 438.37 ps (mean) [0;32m↑[0m 2.0980 Gelem/s
+
+[0;36m════════════════════════════════════════════════════════════════[0m
+[0;34mReports generated:[0m
+  • JSON: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/benchmark_20260422_142126.json
+  • Summary: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/summary_20260422_142126.txt
+  • Raw log: /Users/grey/Lastmile Innovations/projects/snid/rust/benchmark_reports/raw_output_20260422_142126.log

@@ -19,16 +19,13 @@ data = ["serde", "serde_json"]
 uuid = ["dep:uuid"]
 
 [dependencies]
-aes = "0.8"
-base32 = "0.5.1"
-cipher = "0.4"
 getrandom = "0.2"
 hex = "0.4.3"
 hmac = "0.12.1"
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
-sha2 = "0.10"
-subtle = "2.5"
+sha2 = "0.11"
+subtle = "2.6"
 uuid = { version = "1.0", optional = true }
 
 [dev-dependencies]
@@ -49,6 +46,22 @@ harness = false
 name = "extended_families"
 harness = false
 
+[[bench]]
+name = "ecosystem_benchmarks"
+harness = false
+
 [[example]]
 name = "project_vectors"
 required-features = ["data"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.bench]
+inherits = "release"
+lto = "fat"
+codegen-units = 1

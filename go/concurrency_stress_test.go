@@ -198,11 +198,11 @@ func BenchmarkConcurrency_TurboStreamer(b *testing.B) {
 
 func BenchmarkConcurrency_AdaptiveStreamer(b *testing.B) {
 	// Test adaptive streamer under varying load
+	// Note: AdaptiveStreamer is NOT thread-safe, so we use one per worker
 	workers := []int{1, 2, 4, 8}
 
 	for _, w := range workers {
 		b.Run(fmt.Sprintf("%d_workers", w), func(b *testing.B) {
-			streamer := NewAdaptiveStreamer(4096)
 			var wg sync.WaitGroup
 			var ops atomic.Int64
 
@@ -212,6 +212,7 @@ func BenchmarkConcurrency_AdaptiveStreamer(b *testing.B) {
 				for j := 0; j < w; j++ {
 					go func() {
 						defer wg.Done()
+						streamer := NewAdaptiveStreamer(4096) // Per-worker streamer
 						_ = streamer.Next()
 						ops.Add(1)
 					}()

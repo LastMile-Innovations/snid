@@ -1,7 +1,7 @@
 # SNID
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
 [![Rust Version](https://img.shields.io/badge/Rust-1.70+-dea584?logo=rust)](https://www.rust-lang.org/)
 [![Python Version](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)](https://www.python.org/)
 [![Conformance](https://img.shields.io/badge/Conformance-Passing-brightgreen)](conformance/)
@@ -228,6 +228,7 @@ Extended ID families currently represented in this repo:
 - [API Comparison](docs/api-comparison.md) - SNID API vs 2026 best practices
 - [Topologies](docs/TOPOLOGIES.md) - Topology guidance
 - [Integration Contracts](docs/INTEGRATION_CONTRACTS.md) - Storage and integration contracts
+- [Publishing](PUBLISHING.md) - Release and publishing guide
 - [Contributing](CONTRIBUTING.md) - Development guidelines
 - [Roadmap](ROADMAP.md) - Project roadmap and vision
 

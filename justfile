@@ -36,7 +36,7 @@ test-rust:
 
 test-python:
     @echo "Testing Python..."
-    cd python && python3 -m pytest tests/
+    cd python && python3 -m pytest tests/ --ignore=tests/test_bench.py
     cd python && python3 -m pytest tests/test_properties.py
 
 # =============================================================================

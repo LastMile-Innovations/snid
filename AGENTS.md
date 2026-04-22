@@ -103,7 +103,9 @@ cd python && python -m unittest discover -s tests
 - Run conformance tests after any protocol or encoding changes
 - Update `docs/SPEC.md` for protocol changes (implementation-defined changes don't need spec updates)
 - Maintain byte-identical behavior across Go, Rust, and Python
-- Version bump all three packages together (go.mod, Cargo.toml, pyproject.toml)
+- Version bump all three packages together (Cargo.toml, pyproject.toml; Go uses git tags)
+- Run `just test` and `just conformance` before publishing any release
+- Update CHANGELOG.md with release notes before tagging
 
 **Ask first before:**
 - Changing the byte layout or wire format (requires spec version bump)
@@ -117,6 +119,9 @@ cd python && python -m unittest discover -s tests
 - Break cross-language conformance (build will fail)
 - Commit secrets, API keys, or `.env*` files
 - Modify `.venv/`, `target/`, `node_modules/`, or other build artifacts
+- Publish without running conformance suite
+- Version-bump only one language (all three must stay synchronized)
+- Push git tags without verifying tests pass
 
 ## Protocol vs Implementation Changes
 
@@ -267,9 +272,145 @@ ulid = snid.new_ulid()
 - Coarse clock tick rate adapts based on GOMAXPROCS (10ms to 500μs)
 - Lock-free per-P state for Go generators when runtime pinning is available
 
+## Continuous Optimization Philosophy
+
+Performance optimization is not a feature—it is the **baseline of our engineering culture**. Every time you touch a file, the question shouldn't just be "Does it work?", it should be:
+
+**Use first principles and critical deep thinking.** Question assumptions, derive from fundamentals, and don't accept "good enough" as an answer.
+
+- **Memory**: Can I make this stack-allocated instead of heap-allocated?
+- **Cache**: Will this cause false-sharing and invalidate CPU cache lines?
+- **Logic**: Can I make this branchless to aid branch prediction?
+- **Instructions**: Is there a SIMD intrinsic I can use here to parallelize this encoding loop?
+- **Allocation**: Can I pass this by value in registers rather than pushing it onto the stack?
+
+### Optimization Roadmap
+
+**SIMD Base58 Encoding**: Currently dividing by 58 in serial loops. For batching, implement AVX-512 / NEON SIMD vectorized Base58 encoding/decoding. Target: encode batch arrays in a single CPU cycle rather than serially.
+
+**Fork-safe RNG Entropy**: Implement state-check counters to instantly detect a forked process in production. If a fork is detected, RNG state must re-seed instantly to prevent duplicate tails.
+
+**Adaptive Cache-Line Padding**: As we expand to multi-core generators, pad generator shards to 64 bytes to prevent false-sharing between threads.
+
+**Constant-time MAC tails**: For KID and LID verification. Verification of signatures must be hardened into constant-time comparisons to prevent timing-sidechannel attacks.
+
+**PGO (Profile-Guided Optimization)**: Generate PGO profiles during CI/CD benchmark runs, and feed those back into the compiler so Rust and Go can optimize the hot loops for the exact branch probabilities of our generators.
+
+### The Golden Rule
+
+As we push these performance boundaries, we have one non-negotiable anchor: **The Protocol Specification**.
+
+Optimization is an implementation detail—meaning we can rip apart the Rust/Go/Python internal code every single month to make it 20% faster, and none of it will ever require a protocol spec version bump, so long as the 16/32 byte canonical outputs remain completely identical.
+
+If we keep this mentality—where the spec acts as the immutable iron boundary of truth, and the implementation acts as the wild, untethered playground for performance—we will build something that is going to outlive all of us.
+
+See `docs/performance/optimization-tips.md` for detailed optimization guidance and the advanced roadmap.
+
+## Deployment & Publishing
+
+### Publishing Workflow
+
+SNID packages are published to public registries via GitHub Actions on git tags:
+
+- **Go**: Published automatically to proxy.golang.org when git tags are pushed (no manual publish step)
+- **Rust**: Published to crates.io via `cargo publish` in release workflow
+- **Python**: Published to PyPI via `maturin publish` in release workflow
+
+### Release Process
+
+**Prerequisites:**
+- GitHub Secrets configured: `CRATES_IO_TOKEN`, `PYPI_API_TOKEN` (see `deploy/GITHUB_SECRETS.md`)
+- Registry accounts: crates.io (owner of `snid` crate), PyPI (reserved `snid` package)
+- All tests passing: `just test` and `just conformance`
+
+**Steps:**
+1. Bump versions in `rust/Cargo.toml` and `python/pyproject.toml` (Go uses git tags)
+2. Update `CHANGELOG.md` with release notes
+3. Commit and push to main
+4. Create annotated git tag: `git tag -a v0.2.1 -m "Release v0.2.1"`
+5. Push tag: `git push origin v0.2.1`
+6. Monitor `.github/workflows/release.yml` in GitHub Actions
+7. Verify publication on each registry
+
+**Critical:**
+- Version numbers must match across Rust and Python (e.g., 0.2.0)
+- Git tags must follow semantic versioning: `vX.Y.Z`
+- Use annotated tags (`-a`) for proper release notes
+- Conformance suite must pass before any release
+
+### Version Synchronization
+
+When bumping versions, update in this order:
+1. `rust/Cargo.toml` - `version = "X.Y.Z"`
+2. `python/pyproject.toml` - `version = "X.Y.Z"`
+3. Go - No version file (uses git tags directly)
+4. Commit changes together
+
+**Never** version-bump only one language - all three must stay synchronized.
+
+### Registry-Specific Requirements
+
+**crates.io:**
+- Must be listed as owner of `snid` crate
+- API token with "Publish new crates" and "Update existing crates" scope
+- Use `cargo yank` to deprecate bad releases
+
+**PyPI:**
+- 2FA must be enabled on account (required for API tokens)
+- Package name `snid` must be reserved
+- API token with "Entire account" scope for publishing
+- PyPI doesn't support yanking - release new version with fixes
+
+**Go (proxy.golang.org):**
+- Repository must be public
+- Git tags must follow semantic versioning
+- Module path in go.mod must be correct: `github.com/LastMile-Innovations/snid`
+- No manual publish step - automatic on tag push
+
+### Deployment Infrastructure
+
+**GitHub Actions Workflows:**
+- `.github/workflows/ci.yml` - CI + benchmarks on every push/PR
+- `.github/workflows/release.yml` - Publishing on git tags
+- `.github/workflows/conformance.yml` - Cross-language validation
+
+**Deployment Documentation:**
+- `PUBLISHING.md` - Complete release and publishing guide
+- `deploy/TOKEN_SETUP.md` - API token setup instructions
+- `deploy/GITHUB_SECRETS.md` - GitHub secrets configuration
+- `deploy/CI.md` - CI/CD integration guide
+- `deploy/RAILWAY.md` - Railway deployment for benchmarking platform
+- `deploy/DOCKER.md` - Docker deployment guide
+- `deploy/KUBERNETES.md` - Kubernetes deployment guide
+
+### Rollback Procedure
+
+If a release has issues:
+1. **Rust**: `cargo yank --vers X.Y.Z snid`
+2. **Python**: Release new version with fixes (no yanking support)
+3. **Go**: Release new version (cannot delete from proxy)
+4. **GitHub**: Delete release and tag if needed
+
+### Always Before Publishing
+
+- Run `just test` - all language tests must pass
+- Run `just conformance` - cross-language validation must pass
+- Update CHANGELOG.md with release notes
+- Verify version numbers match across Rust and Python
+- Ensure git tag format matches version numbers
+
+### Never
+
+- Publish without running conformance suite
+- Version-bump only one language
+- Commit secrets or API keys
+- Push tags without verifying tests pass
+- Modify protocol without updating `docs/SPEC.md`
+
 ## Additional Notes
 - The Go implementation generates the canonical test vectors
 - Rust and Python consume vectors and must reproduce identical results
 - For detailed protocol rules, see `docs/SPEC.md`
 - For integration contracts, see `docs/INTEGRATION_CONTRACTS.md`
 - For topology guidance, see `docs/TOPOLOGIES.md`
+- For publishing instructions, see `PUBLISHING.md`

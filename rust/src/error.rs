@@ -13,6 +13,7 @@ pub enum Error {
     InvalidContentHash,
     InvalidKey,
     InvalidSignature,
+    Random(getrandom::Error),
     Hex(FromHexError),
     #[cfg(feature = "data")]
     Json(serde_json::Error),
@@ -29,6 +30,7 @@ impl fmt::Display for Error {
             Error::InvalidContentHash => write!(f, "invalid content hash"),
             Error::InvalidKey => write!(f, "invalid key"),
             Error::InvalidSignature => write!(f, "invalid signature"),
+            Error::Random(e) => write!(f, "random source error: {}", e),
             Error::Hex(e) => write!(f, "hex error: {}", e),
             #[cfg(feature = "data")]
             Error::Json(e) => write!(f, "json error: {}", e),
@@ -40,6 +42,7 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Hex(e) => Some(e),
+            Error::Random(e) => Some(e),
             #[cfg(feature = "data")]
             Error::Json(e) => Some(e),
             _ => None,
@@ -50,6 +53,12 @@ impl std::error::Error for Error {
 impl From<FromHexError> for Error {
     fn from(value: FromHexError) -> Self {
         Self::Hex(value)
+    }
+}
+
+impl From<getrandom::Error> for Error {
+    fn from(value: getrandom::Error) -> Self {
+        Self::Random(value)
     }
 }
 

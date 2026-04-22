@@ -1,0 +1,34 @@
+[build]
+# Use all available cores for parallel compilation
+jobs = 0
+
+# Enable incremental compilation for debug builds
+incremental = true
+
+[profile.dev]
+# Optimize dependencies even in debug mode for better performance
+opt-level = 1
+
+[profile.dev.package."*"]
+# Full optimization for dependencies in debug mode
+opt-level = 3
+
+[profile.release]
+# Maximum optimization
+opt-level = 3
+# Fat LTO for maximum performance (slower compile, faster runtime)
+lto = "fat"
+# Single codegen unit for better optimization (slower compile, faster runtime)
+codegen-units = 1
+# Strip symbols for smaller binary size
+strip = true
+# Abort on panic for smaller binary and faster unwinding
+panic = "abort"
+
+[profile.bench]
+# Inherit from release for benchmarking
+inherits = "release"
+# Fat LTO for consistent benchmark results
+lto = "fat"
+# Single codegen unit for consistent benchmark results
+codegen-units = 1

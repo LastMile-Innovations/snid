@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-04-22T14:21:03-07:00",
+  "elapsed_seconds": 214,
+  "benchmarks": [
+    {
+      "name": "snid_new_fast/snid_new_fast",
+      "value": 6.4842,
+      "unit": "ns",
+      "mean_seconds": .000000006484200
+    }
+,
+    {
+      "name": "snid_new_safe/snid_new_safe",
+      "value": 652.84,
+      "unit": "ns",
+      "mean_seconds": .000000652840000
+    }
+,
+    {
+      "name": "snid_to_wire_mat/snid_to_wire_mat",
+      "value": 212.01,
+      "unit": "ns",
+      "mean_seconds": .000000212010000
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance",
+      "value": 1.4317,
+      "unit": "ns",
+      "mean_seconds": .000000001431700
+    }
+,
+    {
+      "name": "eid_from_parts/eid_from_parts",
+      "value": 779.21,
+      "unit": "ps",
+      "mean_seconds": .000000000779210
+    }
+,
+    {
+      "name": "lid_from_parts/lid_from_parts",
+      "value": 602.96,
+      "unit": "ns",
+      "mean_seconds": .000000602960000
+    }
+,
+    {
+      "name": "snid_to_uuid_string/snid_to_uuid_string",
+      "value": 29.274,
+      "unit": "ns",
+      "mean_seconds": .000000029274000
+    }
+,
+    {
+      "name": "nid_hamming_distance/nid_hamming_distance",
+      "value": 1.3216,
+      "unit": "ns",
+      "mean_seconds": .000000001321600
+    }
+,
+    {
+      "name": "bid_parse_wire/bid_parse_wire",
+      "value": 206.59,
+      "unit": "ns",
+      "mean_seconds": .000000206590000
+    }
+,
+    {
+      "name": "eid_to_bytes/eid_to_bytes",
+      "value": 1.5392,
+      "unit": "ns",
+      "mean_seconds": .000000001539200
+    }
+,
+    {
+      "name": "eid_timestamp/eid_timestamp",
+      "value": 448.35,
+      "unit": "ps",
+      "mean_seconds": .000000000448350
+    }
+
+  ]
+}

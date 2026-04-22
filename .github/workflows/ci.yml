@@ -138,7 +138,7 @@ jobs:
           "$(go env GOPATH)/bin/benchstat" conformance/baselines/go.txt conformance/artifacts/go/bench.txt
 
       - name: Enforce Go regression threshold
-        run: python conformance/compare_benchmarks.py --language go --baseline conformance/baselines/go.txt --current conformance/artifacts/go/bench.txt --threshold-pct 5
+        run: python conformance/compare_benchmarks.py --language go --baseline conformance/baselines/go.txt --current conformance/artifacts/go/bench.txt --threshold-pct 3
 
       - name: Run Rust benchmarks
         working-directory: rust
@@ -163,7 +163,7 @@ jobs:
           PY
 
       - name: Enforce Rust regression threshold
-        run: python conformance/compare_benchmarks.py --language rust --baseline conformance/baselines/rust.json --current conformance/artifacts/rust/bench.json --threshold-pct 5
+        run: python conformance/compare_benchmarks.py --language rust --baseline conformance/baselines/rust.json --current conformance/artifacts/rust/bench.json --threshold-pct 3
 
       - name: Run Python benchmarks
         working-directory: python

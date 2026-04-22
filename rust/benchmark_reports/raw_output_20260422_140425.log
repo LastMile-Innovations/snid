@@ -1,0 +1,54 @@
+    Finished `bench` profile [optimized] target(s) in 0.32s
+     Running benches/benchmarks.rs (target/release/deps/benchmarks-665416e4ab34a1fc)
+test snid_new_fast/snid_new_fast ... bench:           5 ns/iter (+/- 3)
+
+test snid_new_safe/snid_new_safe ... bench:         622 ns/iter (+/- 48)
+
+test snid_to_wire_mat/snid_to_wire_mat ... bench:         207 ns/iter (+/- 1)
+
+test nid_hamming_distance/nid_hamming_distance ... bench:           1 ns/iter (+/- 0)
+
+test bid_wire/bid_wire ... bench:         370 ns/iter (+/- 3)
+
+test eid_from_parts/eid_from_parts ... bench:           0 ns/iter (+/- 0)
+
+test lid_from_parts/lid_from_parts ... bench:         597 ns/iter (+/- 61)
+
+test snid_to_uuid_string/snid_to_uuid_string ... bench:          29 ns/iter (+/- 3)
+
+    Finished `bench` profile [optimized] target(s) in 0.26s
+     Running benches/extended_families.rs (target/release/deps/extended_families-c702363fbc749968)
+test nid_new/nid_new ... bench:           9 ns/iter (+/- 1)
+
+test nid_hamming_distance/nid_hamming_distance ... bench:           1 ns/iter (+/- 0)
+
+test nid_batch_100/nid_batch_100 ... bench:         354 ns/iter (+/- 56)
+
+test nid_batch_1000/nid_batch_1000 ... bench:        3524 ns/iter (+/- 265)
+
+test lid_new/lid_new ... bench:         600 ns/iter (+/- 8)
+
+test lid_head/lid_head ... bench:           5 ns/iter (+/- 0)
+
+test bid_new/bid_new ... bench:          13 ns/iter (+/- 2)
+
+test bid_wire/bid_wire ... bench:         378 ns/iter (+/- 3)
+
+test bid_parse_wire/bid_parse_wire ... bench:         207 ns/iter (+/- 1)
+
+test eid_new/eid_new ... bench:           0 ns/iter (+/- 0)
+
+test eid_to_bytes/eid_to_bytes ... bench:           1 ns/iter (+/- 0)
+
+test eid_counter/eid_counter ... bench:           0 ns/iter (+/- 0)
+
+test eid_timestamp/eid_timestamp ... bench:           0 ns/iter (+/- 0)
+
+test eid_batch_100/eid_batch_100 ... bench:          33 ns/iter (+/- 1)
+
+test eid_batch_1000/eid_batch_1000 ... bench:         312 ns/iter (+/- 14)
+
+    Finished `bench` profile [optimized] target(s) in 0.27s
+     Running benches/ecosystem_benchmarks.rs (target/release/deps/ecosystem_benchmarks-0f0b980cd561b736)
+error: Unrecognized option: 'output-format'
+error: bench failed, to rerun pass `--bench ecosystem_benchmarks`

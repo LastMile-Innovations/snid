@@ -1,7 +1,10 @@
 //! Conformance vector loading and validation tests.
 
+#[allow(unused_imports)]
 use crate::core::Snid;
+#[allow(unused_imports)]
 use crate::error::Error;
+#[allow(unused_imports)]
 use crate::types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
 
 #[cfg(feature = "data")]
@@ -166,8 +169,11 @@ pub struct NegativeVector {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
+    #[allow(unused_imports)]
     use crate::core::Snid;
+    #[allow(unused_imports)]
     use crate::types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
 
     #[cfg(feature = "data")]

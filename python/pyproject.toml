@@ -58,3 +58,5 @@ Source = "https://github.com/LastMile-Innovations/snid"
 python-source = "."
 module-name = "snid.snid_native"
 features = ["data"]
+strip = true
+release = true

@@ -1,6 +1,7 @@
 //! Access Key ID (AKID) dual-part credentials.
 
 use crate::core::Snid;
+use crate::encoding::decode_base58_value;
 use crate::error::Error;
 use crate::helpers::fnv1a;
 
@@ -46,21 +47,14 @@ impl Akid {
         }
         let bytes = encoded.as_bytes();
         let checksum_byte = bytes[bytes.len() - 1];
-        let alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-        let checksum_pos = alphabet
-            .iter()
-            .position(|&c| c == checksum_byte)
-            .ok_or(Error::InvalidPayload)?;
+        let checksum_pos = decode_base58_value(checksum_byte).ok_or(Error::InvalidPayload)?;
         let mut hash: u32 = 2166136261;
         for &byte in &bytes[..bytes.len() - 1] {
-            let pos = alphabet
-                .iter()
-                .position(|&c| c == byte)
-                .ok_or(Error::InvalidPayload)? as u32;
+            let pos = decode_base58_value(byte).ok_or(Error::InvalidPayload)? as u32;
             hash ^= pos;
             hash = hash.wrapping_mul(16777619);
         }
-        if (hash % 58) as usize != checksum_pos {
+        if (hash % 58) as u8 != checksum_pos {
             return Err(Error::ChecksumMismatch);
         }
         Ok(())

@@ -10,6 +10,7 @@ pub fn fnv1a(s: &str) -> u32 {
     h
 }
 
+#[allow(dead_code)]
 // FNV-1a 64-bit hash
 pub fn fnv1a64(s: &str) -> u64 {
     let mut h: u64 = 14695981039346656037;
@@ -20,33 +21,36 @@ pub fn fnv1a64(s: &str) -> u64 {
     h
 }
 
+#[allow(dead_code)]
 // FNV-1a 32-bit hash with ASCII uppercasing
 pub fn fnv1a32_upper(s: &str) -> u32 {
     let mut h: u32 = 2166136261;
     for b in s.bytes() {
-        let c = if b >= b'a' && b <= b'z' { b - 32 } else { b };
+        let c = if b.is_ascii_lowercase() { b - 32 } else { b };
         h ^= c as u32;
         h = h.wrapping_mul(16777619);
     }
     h
 }
 
+#[allow(dead_code)]
 // FNV-1a 64-bit hash with ASCII uppercasing
 pub fn fnv1a64_upper(s: &str) -> u64 {
     let mut h: u64 = 14695981039346656037;
     for b in s.bytes() {
-        let c = if b >= b'a' && b <= b'z' { b - 32 } else { b };
+        let c = if b.is_ascii_lowercase() { b - 32 } else { b };
         h ^= c as u64;
         h = h.wrapping_mul(1099511628211);
     }
     h
 }
 
+#[allow(dead_code)]
 // FNV-1a 64-bit hash with ASCII lowercasing
 pub fn fnv1a64_lower(s: &str) -> u64 {
     let mut h: u64 = 14695981039346656037;
     for b in s.bytes() {
-        let c = if b >= b'A' && b <= b'Z' { b + 32 } else { b };
+        let c = if b.is_ascii_uppercase() { b + 32 } else { b };
         h ^= c as u64;
         h = h.wrapping_mul(1099511628211);
     }
@@ -57,9 +61,9 @@ pub fn fnv1a64_lower(s: &str) -> u64 {
 pub fn sanitize_alias(s: &str) -> String {
     s.chars()
         .map(|c| {
-            if (c >= 'a' && c <= 'z')
-                || (c >= 'A' && c <= 'Z')
-                || (c >= '0' && c <= '9')
+            if c.is_ascii_lowercase()
+                || c.is_ascii_uppercase()
+                || c.is_ascii_digit()
                 || c == '-'
                 || c == '_'
             {
@@ -76,6 +80,7 @@ pub fn sanitize_alias(s: &str) -> String {
 
 // Zero-alloc hex encoding for TraceID
 pub const HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
+#[allow(dead_code)]
 pub const HEX_CHARS_UPPER: &[u8; 16] = b"0123456789ABCDEF";
 
 pub fn hex_encode_fast(bytes: &[u8]) -> String {
@@ -85,6 +90,17 @@ pub fn hex_encode_fast(bytes: &[u8]) -> String {
         out.push(HEX_CHARS[(b & 0x0F) as usize]);
     }
     String::from_utf8(out).unwrap()
+}
+
+pub fn hex_encode_to<'a>(bytes: &[u8], out: &'a mut [u8]) -> &'a str {
+    debug_assert!(out.len() >= bytes.len() * 2);
+    let mut cursor = 0usize;
+    for &byte in bytes {
+        out[cursor] = HEX_CHARS[(byte >> 4) as usize];
+        out[cursor + 1] = HEX_CHARS[(byte & 0x0F) as usize];
+        cursor += 2;
+    }
+    unsafe { std::str::from_utf8_unchecked(&out[..cursor]) }
 }
 
 pub fn splitmix64(seed: &mut u64) -> u64 {

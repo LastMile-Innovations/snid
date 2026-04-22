@@ -3,7 +3,7 @@
 use crate::core::Snid;
 use crate::encoding::encode_payload;
 use crate::error::Error;
-use crate::helpers::hex_encode_fast;
+use crate::helpers::{hex_encode_fast, hex_encode_to};
 use getrandom::getrandom;
 use std::fmt;
 use std::str::FromStr;
@@ -14,9 +14,13 @@ pub struct ShortId(pub [u8; 8]);
 
 impl ShortId {
     pub fn new() -> Self {
+        Self::try_new().expect("os rng")
+    }
+
+    pub fn try_new() -> Result<Self, Error> {
         let mut raw = [0u8; 8];
-        getrandom(&mut raw).unwrap();
-        Self(raw)
+        getrandom(&mut raw)?;
+        Ok(Self(raw))
     }
 
     pub fn from_bytes(bytes: [u8; 8]) -> Self {
@@ -27,6 +31,12 @@ impl ShortId {
         let mut padded = [0u8; 16];
         padded[..8].copy_from_slice(&self.0);
         format!("{}:{}", atom, encode_payload(padded))
+    }
+}
+
+impl Default for ShortId {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -68,9 +78,23 @@ impl TraceId {
     }
 
     pub fn to_trace_parent(&self, span_id: [u8; 8]) -> String {
-        let trace_hex = self.to_hex();
-        let span_hex = hex_encode_fast(&span_id);
-        format!("00-{}-{}-01", trace_hex, span_hex)
+        let mut out = [0u8; 55];
+        self.write_traceparent(span_id, &mut out).to_owned()
+    }
+
+    pub fn write_traceparent<'a>(&self, span_id: [u8; 8], out: &'a mut [u8; 55]) -> &'a str {
+        out[..3].copy_from_slice(b"00-");
+        hex_encode_to(&self.0, &mut out[3..35]);
+        out[35] = b'-';
+        hex_encode_to(&span_id, &mut out[36..52]);
+        out[52..].copy_from_slice(b"-01");
+        unsafe { std::str::from_utf8_unchecked(out) }
+    }
+}
+
+impl Default for TraceId {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -122,6 +146,15 @@ mod tests {
         let id = TraceId::new();
         let display = format!("{}", id);
         assert_eq!(display.len(), 32); // 16 bytes = 32 hex chars
+    }
+
+    #[test]
+    fn test_trace_id_write_traceparent_matches_to_trace_parent() {
+        let id = TraceId::from_bytes([1u8; 16]);
+        let span = [2u8; 8];
+        let mut out = [0u8; 55];
+        let written = id.write_traceparent(span, &mut out);
+        assert_eq!(written, id.to_trace_parent(span));
     }
 
     #[test]
