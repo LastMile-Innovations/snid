@@ -176,6 +176,14 @@ func initShards() {
 	}
 }
 
+// Options provides configuration for ID generation with zero-allocation.
+// Pass by value to avoid heap escapes.
+type Options struct {
+	Tenant string
+	Shard  uint16
+	Time   time.Time
+}
+
 // NewFast generates a UUID v7 with ~3.7ns latency.
 // Thread-safe for concurrent use.
 func NewFast() ID {
@@ -194,7 +202,7 @@ func NewFast() ID {
 
 		if ms > lastMS {
 			lastMS = ms
-			seq = 0
+			seq = randomSeqStart(&s0, &s1, &s2, &s3)
 		} else {
 			seq++
 			if seq > 0x3FFF {
@@ -241,13 +249,13 @@ func newFastShared() ID {
 	ms := coarseClock.value.Load()
 	if ms > s.lastMS {
 		s.lastMS = ms
-		s.sequence = 0
+		s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 	} else {
 		s.sequence++
 		if s.sequence > 0x3FFF {
 			s.lastMS++
 			ms = s.lastMS
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		} else {
 			ms = s.lastMS
 		}
@@ -280,13 +288,13 @@ func NewProjected(tenantID string, shard uint16) ID {
 	ms := coarseClock.value.Load()
 	if ms > s.lastMS {
 		s.lastMS = ms
-		s.sequence = 0
+		s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 	} else {
 		s.sequence++
 		if s.sequence > 0x3FFF {
 			s.lastMS++
 			ms = s.lastMS
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		} else {
 			ms = s.lastMS
 		}
@@ -320,7 +328,7 @@ func NewBatch(atom Atom, count int) []ID {
 	ms := coarseClock.value.Load()
 	if ms > s.lastMS {
 		s.lastMS = ms
-		s.sequence = 0
+		s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 	}
 
 	seq := s.sequence
@@ -332,7 +340,7 @@ func NewBatch(atom Atom, count int) []ID {
 		if seq > 0x3FFF {
 			s.lastMS++
 			ms = s.lastMS
-			seq = 0
+			seq = randomSeqStart(&s0, &s1, &s2, &s3)
 		}
 
 		res := rotl(s1*5, 7) * 9
@@ -359,6 +367,47 @@ func NewBatch(atom Atom, count int) []ID {
 }
 
 // =============================================================================
+// UNIVERSAL PARADIGMS (API V2)
+// =============================================================================
+
+// NewWith generates a configured ID using stack-allocated options.
+// This is the universal paradigm for configured ID generation.
+// Zero-allocation: Options struct is passed by value.
+func NewWith(opts Options) ID {
+	if opts.Tenant != "" {
+		return NewProjected(opts.Tenant, opts.Shard)
+	}
+	if !opts.Time.IsZero() {
+		// Generate with specific timestamp
+		ms := uint64(opts.Time.UnixMilli())
+		s := nextShard()
+		s.mu.Lock()
+		s.lastMS = ms
+		s.sequence = 0
+		mid := uint64(s.machineID)
+		s0, s1, s2, s3 := s.s0, s.s1, s.s2, s.s3
+		s.mu.Unlock()
+
+		res := rotl(s1*5, 7) * 9
+		t := s1 << 17
+		s2 ^= s0
+		s3 ^= s1
+		s1 ^= s2
+		s0 ^= s3
+		s2 ^= t
+		s3 = rotl(s3, 45)
+
+		var id ID
+		binary.BigEndian.PutUint64(id[:8], (ms<<16)|0x7000)
+		binary.BigEndian.PutUint64(id[8:], 0x8000000000000000|
+			((uint64(mid)&0xFFFFFF)<<36)|
+			((res>>28)&0xFFFFFFFFF))
+		return id
+	}
+	return NewFast()
+}
+
+// =============================================================================
 // HELPERS
 // =============================================================================
 
@@ -373,6 +422,23 @@ func splitMix64(seed *uint64) uint64 {
 
 // rotl implements the corresponding operation.
 func rotl(x uint64, k int) uint64 { return (x << k) | (x >> (64 - k)) }
+
+// randomSeqStart generates a random 14-bit sequence start value (0-16383).
+// This implements RFC 9562 Method 2 for randomized monotonicity,
+// preventing ID enumeration attacks when the creation window is known.
+func randomSeqStart(s0, s1, s2, s3 *uint64) uint32 {
+	// Advance Xoshiro256** state once
+	res := rotl((*s1)*5, 7) * 9
+	t := *s1 << 17
+	*s2 ^= *s0
+	*s3 ^= *s1
+	*s1 ^= *s2
+	*s0 ^= *s3
+	*s2 ^= t
+	*s3 = rotl(*s3, 45)
+	// Return lower 14 bits as random sequence start (0-16383)
+	return uint32(res & 0x3FFF)
+}
 
 // fnv1a implements the corresponding operation.
 func fnv1a(s string) uint32 {

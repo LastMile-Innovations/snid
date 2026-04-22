@@ -26,7 +26,7 @@ UUIDv7 (RFC 9562) is the 2026 consensus for database primary keys—and for good
 
 ### Generation Speed (Verified Benchmarks - Apple M4, 2026)
 
-| Metric | UUIDv7 (google/uuid) | SNID (Native) | SNID (UUIDv7 Mode) |
+| Metric | UUIDv7 library baseline | SNID (Native) | SNID (UUIDv7 Mode) |
 |--------|---------------------|---------------|-------------------|
 | Generation latency | 236.9 ns | **3.728 ns** | 244.9 ns |
 | Throughput | 4.2M ops/sec | **268M ops/sec** | 4.1M ops/sec |
@@ -173,11 +173,11 @@ cd python && python -m unittest discover -s tests
 ### From UUIDv7 to SNID
 
 ```go
-// Existing UUIDv7 code
-id := uuid.NewV7()
+// Existing UUIDv7 string
+uuidString := "0189abcd-1234-7abc-9abc-0123456789ab"
 
-// Drop-in replacement (byte-for-byte compatible)
-snidID := snid.FromUUIDv7(id.String())
+// Parse as SNID (byte-for-byte compatible)
+snidID, err := snid.ParseUUIDString(uuidString)
 
 // Or use SNID's UUIDv7-compatible mode directly
 snidID := snid.NewUUIDv7()

@@ -1,0 +1,92 @@
+name: Database Benchmarks
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+  workflow_dispatch:  # Allow manual trigger
+  pull_request:
+    paths:
+      - 'benchmarks/db/**'
+      - 'go/**'
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+
+      - name: Start PostgreSQL
+        working-directory: benchmarks/db
+        run: |
+          docker-compose up -d
+          docker-compose exec postgres pg_isready
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            if docker exec -it snid-bench-postgres-1 pg_isready; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run database benchmarks
+        working-directory: benchmarks/db
+        run: |
+          go run main.go --benchmark insert-throughput --rows 1000000 --workers 10 --batch 1000 --runs 5
+          go run main.go --benchmark index-size
+          go run main.go --benchmark query-performance
+          go run main.go --benchmark network-overhead
+
+      - name: Upload database results
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-benchmark-results
+          path: benchmarks/results/*.json
+          retention-days: 90
+
+      - name: Comment on PR (if triggered by PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            
+            let comment = '## 🗄️ Database Benchmark Results\n\n';
+            comment += 'Database benchmarks completed successfully. ';
+            comment += 'Check the artifacts for detailed results.\n\n';
+            
+            // Try to find and summarize results
+            try {
+              const resultFiles = glob.sync('benchmarks/results/*.json');
+              if (resultFiles.length > 0) {
+                comment += '### Summary\n\n';
+                comment += `- Files generated: ${resultFiles.length}\n`;
+                resultFiles.forEach(file => {
+                  comment += `- ${file.split('/').pop()}\n`;
+                });
+              }
+            } catch (e) {
+              comment += 'Could not parse results.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo,
+              body: comment
+            });
+
+      - name: Stop PostgreSQL
+        if: always()
+        working-directory: benchmarks/db
+        run: docker-compose down

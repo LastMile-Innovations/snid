@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestEncodingFunctions tests encoding.go functions for coverage
@@ -243,4 +244,95 @@ func FuzzSNIDWireRoundTrip(f *testing.F) {
 			t.Fatalf("SNID wire roundtrip mismatch: got %x want %x", parsed, id)
 		}
 	})
+}
+
+// TestCrockfordBase32Encoding tests Crockford Base32 encoding
+func TestCrockfordBase32Encoding(t *testing.T) {
+	id := NewFast()
+	base32 := id.StringBase32()
+
+	if base32 == "" {
+		t.Fatal("expected non-empty base32 string")
+	}
+
+	// Crockford Base32 should only contain valid characters
+	for _, c := range base32 {
+		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+			t.Fatalf("invalid character in base32: %c", c)
+		}
+	}
+}
+
+// TestCrockfordBase32Consistency tests encoding consistency
+func TestCrockfordBase32Consistency(t *testing.T) {
+	id := NewFast()
+	base32_1 := id.StringBase32()
+	base32_2 := id.StringBase32()
+
+	if base32_1 != base32_2 {
+		t.Fatal("base32 encoding not consistent")
+	}
+}
+
+// TestCrockfordBase32Invalid tests invalid base32 strings
+func TestCrockfordBase32Invalid(t *testing.T) {
+	_, err := decodeBase32("INVALID!@#")
+	if err == nil {
+		t.Fatal("expected error for invalid base32")
+	}
+}
+
+// TestNewSafe tests the Public-Safe Mode generator
+func TestNewSafe(t *testing.T) {
+	id := NewSafe()
+
+	// Check that it's a valid UUIDv7
+	version := id.Version()
+	if version != 7 {
+		t.Fatalf("expected version 7, got %d", version)
+	}
+
+	// Check variant bits manually (variant is stored in byte 8, bits 6-7)
+	variant := (id[8] >> 6) & 0b11
+	if variant != 0b10 {
+		t.Fatalf("expected variant 0b10, got %d", variant)
+	}
+}
+
+// TestNewSafeTimeBlurring tests time-blurring behavior
+func TestNewSafeTimeBlurring(t *testing.T) {
+	id1 := NewSafe()
+	id2 := NewSafe()
+
+	// Both should be in the same second due to time-blurring
+	ts1 := id1.Time()
+	ts2 := id2.Time()
+
+	// Timestamps should be within 1 second (allow for boundary crossings)
+	diff := ts1.Sub(ts2)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > time.Second {
+		t.Fatalf("time-blurring failed: timestamps differ by %v", diff)
+	}
+}
+
+// TestNewSafeUniqueness tests uniqueness of safe IDs
+func TestNewSafeUniqueness(t *testing.T) {
+	ids := make(map[ID]bool)
+	for i := 0; i < 100; i++ {
+		id := NewSafe()
+		if ids[id] {
+			t.Fatal("duplicate ID generated")
+		}
+		ids[id] = true
+	}
+}
+
+// BenchmarkNewSafe benchmarks the NewSafe generator performance
+func BenchmarkNewSafe(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewSafe()
+	}
 }

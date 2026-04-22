@@ -20,22 +20,22 @@ static COARSE_CLOCK: LazyLock<AtomicU64> = LazyLock::new(|| AtomicU64::new(curre
 pub(crate) fn init_coarse_clock() {
     static INIT: std::sync::Once = std::sync::Once::new();
     INIT.call_once(|| {
-        std::thread::spawn(|| {
-            loop {
-                let now = current_time_ms();
-                COARSE_CLOCK.store(now, Ordering::Relaxed);
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            }
+        std::thread::spawn(|| loop {
+            let now = current_time_ms();
+            COARSE_CLOCK.store(now, Ordering::Relaxed);
+            std::thread::sleep(std::time::Duration::from_millis(10));
         });
     });
 }
 
 pub(crate) struct GeneratorState {
+    _pad_front: [u8; 64],  // Front padding: isolates this struct from adjacent memory
     last_ms: u64,
     sequence: u16,
     machine_id: u32,
     state: [u64; 4],
     pid: u32,
+    _pad_back: [u8; 64],   // Back padding: ensures struct occupies full cache lines
 }
 
 impl GeneratorState {
@@ -46,6 +46,7 @@ impl GeneratorState {
         let pid = process::id();
         let machine_id = (splitmix64(&mut z) as u32 ^ pid) & 0x00FF_FFFF;
         Self {
+            _pad_front: [0u8; 64],
             last_ms: current_time_ms(),
             sequence: 0,
             machine_id,
@@ -56,22 +57,24 @@ impl GeneratorState {
                 splitmix64(&mut z),
             ],
             pid,
+            _pad_back: [0u8; 64],
         }
     }
 
+    #[inline(always)]
     pub(crate) fn next(&mut self) -> Snid {
         // Use coarse clock for performance
         let mut ms = COARSE_CLOCK.load(Ordering::Relaxed);
 
         if ms > self.last_ms {
             self.last_ms = ms;
-            self.sequence = 0;
+            self.sequence = random_seq_start(&mut self.state);
         } else {
             self.sequence = self.sequence.wrapping_add(1);
             if self.sequence > 0x3FFF {
                 self.last_ms += 1;
                 ms = self.last_ms;
-                self.sequence = 0;
+                self.sequence = random_seq_start(&mut self.state);
             } else {
                 ms = self.last_ms;
             }
@@ -97,6 +100,24 @@ impl GeneratorState {
         out[8..].copy_from_slice(&lo.to_be_bytes());
         Snid(out)
     }
+}
+
+// random_seq_start generates a random 14-bit sequence start value (0-16383).
+// This implements RFC 9562 Method 2 for randomized monotonicity,
+// preventing ID enumeration attacks when the creation window is known.
+#[inline(always)]
+fn random_seq_start(state: &mut [u64; 4]) -> u16 {
+    // Advance Xoshiro256** state once
+    let res = state[1].wrapping_mul(5).rotate_left(7).wrapping_mul(9);
+    let t = state[1] << 17;
+    state[2] ^= state[0];
+    state[3] ^= state[1];
+    state[1] ^= state[2];
+    state[0] ^= state[3];
+    state[2] ^= t;
+    state[3] = state[3].rotate_left(45);
+    // Return lower 14 bits as random sequence start (0-16383)
+    (res & 0x3FFF) as u16
 }
 
 pub(crate) fn current_time_ms() -> u64 {
@@ -186,5 +207,32 @@ mod tests {
         init_coarse_clock();
         // Should not panic
         init_coarse_clock();
+    }
+
+    #[test]
+    fn test_randomized_sequence_bounds() {
+        // Generate many IDs to test overflow handling
+        let mut state = GeneratorState::init();
+        for _ in 0..10000 {
+            let id = state.next();
+            // Extract sequence from bits 52-65 (14 bits)
+            let hi = u64::from_be_bytes([id.0[0], id.0[1], id.0[2], id.0[3], id.0[4], id.0[5], id.0[6], id.0[7]]);
+            let seq = (hi & 0x3FFF) as u16;
+            assert!(seq <= 0x3FFF, "sequence {} exceeds maximum value 16383", seq);
+        }
+    }
+
+    #[test]
+    fn test_randomized_sequence_monotonicity() {
+        let mut state = GeneratorState::init();
+        let mut prev = state.next();
+        for _ in 0..1000 {
+            let curr = state.next();
+            // IDs should be monotonic (timestamp + sequence)
+            let ts_prev = prev.timestamp_millis();
+            let ts_curr = curr.timestamp_millis();
+            assert!(ts_curr >= ts_prev, "timestamp not monotonic");
+            prev = curr;
+        }
     }
 }

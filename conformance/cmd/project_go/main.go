@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	snid "github.com/LastMile-Innovations/snid/go"
+	snid "github.com/LastMile-Innovations/snid"
 )
 
 type vectorFile struct {
@@ -22,12 +22,12 @@ type vectorFile struct {
 }
 
 type coreVector struct {
-	Atom        string `json:"atom"`
-	BytesHex    string `json:"bytes_hex"`
-	Wire        string `json:"wire"`
-	TensorHi    int64  `json:"tensor_hi"`
-	TensorLo    int64  `json:"tensor_lo"`
-	LLMFormat   llmV1  `json:"llm_format"`
+	Atom      string `json:"atom"`
+	BytesHex  string `json:"bytes_hex"`
+	Wire      string `json:"wire"`
+	TensorHi  int64  `json:"tensor_hi"`
+	TensorLo  int64  `json:"tensor_lo"`
+	LLMFormat llmV1  `json:"llm_format"`
 }
 
 type llmV1 struct {
@@ -136,8 +136,8 @@ type ledgerProjection struct {
 }
 
 type tensorProjection struct {
-	BytesHex     string   `json:"bytes_hex"`
-	TensorWords  [4]int64 `json:"tensor_words"`
+	BytesHex    string   `json:"bytes_hex"`
+	TensorWords [4]int64 `json:"tensor_words"`
 }
 
 type capabilityProj struct {

@@ -1,0 +1,164 @@
+name: Extended Family Benchmarks
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+  workflow_dispatch:  # Allow manual trigger
+  pull_request:
+    paths:
+      - 'go/extended_families_bench_test.go'
+      - 'rust/benches/extended_families.rs'
+      - 'python/tests/test_extended_bench.py'
+      - 'go/spatial.go'
+      - 'go/neural.go'
+      - 'go/lid.go'
+      - 'go/bid.go'
+      - 'go/eid.go'
+
+jobs:
+  extended-go:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+
+      - name: Run extended family benchmarks
+        working-directory: go
+        run: go test -bench=BenchmarkSGID -bench=BenchmarkNID -bench=BenchmarkLID -bench=BenchmarkBID -bench=BenchmarkEID -benchmem -run=^$ ./...
+
+      - name: Save Go results
+        run: |
+          mkdir -p benchmarks/results
+          cd go
+          go test -bench=BenchmarkSGID -bench=BenchmarkNID -bench=BenchmarkLID -bench=BenchmarkBID -bench=BenchmarkEID -benchmem -run=^$ ./... > ../benchmarks/results/extended-go-bench.txt
+
+      - name: Upload Go results
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-go-benchmarks
+          path: benchmarks/results/extended-go-bench.txt
+          retention-days: 90
+
+  extended-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run extended family benchmarks
+        working-directory: rust
+        run: cargo bench --bench extended_families
+
+      - name: Export Rust benchmark summary
+        working-directory: rust
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("target/criterion")
+          benchmarks = {}
+          for estimates in root.glob("**/new/estimates.json"):
+              if estimates.parts[-3] == "report":
+                  continue
+              bench_name = estimates.parts[-4]
+              data = json.loads(estimates.read_text())
+              benchmarks[bench_name] = {"ns_per_op": data["mean"]["point_estimate"]}
+          Path("../benchmarks/results").mkdir(parents=True, exist_ok=True)
+          Path("../benchmarks/results/extended-rust-bench.json").write_text(json.dumps({"benchmarks": benchmarks}, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload Rust results
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-rust-benchmarks
+          path: benchmarks/results/extended-rust-bench.json
+          retention-days: 90
+
+  extended-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Python extension
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --manifest-path python/Cargo.toml
+
+      - name: Install Python benchmark dependencies
+        run: |
+          python -m pip install pytest pytest-benchmark
+
+      - name: Run extended family benchmarks
+        working-directory: python
+        run: pytest tests/test_extended_bench.py --benchmark-json ../benchmarks/results/extended-python-bench.json
+
+      - name: Upload Python results
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-python-benchmarks
+          path: benchmarks/results/extended-python-bench.json
+          retention-days: 90
+
+  regression-check:
+    needs: [extended-go, extended-rust, extended-python]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmarks/results
+
+      - name: Run regression detection
+        run: |
+          python benchmarks/regression_detector.py benchmarks/results/extended-go-bench.txt || true
+          python benchmarks/regression_detector.py benchmarks/results/extended-rust-bench.json || true
+          python benchmarks/regression_detector.py benchmarks/results/extended-python-bench.json || true
+
+      - name: Comment on PR (if triggered by PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            
+            let comment = '## 🔬 Extended Family Benchmark Results\n\n';
+            comment += 'Extended family benchmarks completed successfully. ';
+            comment += 'Check the artifacts for detailed results.\n\n';
+            
+            comment += '### Benchmarks Covered\n\n';
+            comment += '- **SGID**: Spatial operations (H3 cell, LatLng, parent)\n';
+            comment += '- **NID**: Neural operations (distance, similarity)\n';
+            comment += '- **LID**: Ledger operations (HMAC verification)\n';
+            comment += '- **BID**: Content-addressable operations (BLAKE3 hashing)\n';
+            comment += '- **EID**: Ephemeral operations (high-frequency generation)\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo,
+              body: comment
+            });

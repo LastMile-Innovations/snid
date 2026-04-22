@@ -1,5 +1,6 @@
 import json
 import unittest
+import uuid
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -10,14 +11,16 @@ try:
     import sys
 
     sys.path.insert(0, str(PYTHON_ROOT))
-    from snid import KID, SNID, WID, XID, load_vectors, neo4j
+    from snid import KID, SNID, WID, XID, from_uuid, load_vectors, neo4j, new_uuidv7
 except Exception:  # pragma: no cover
     KID = None
     SNID = None
     WID = None
     XID = None
+    from_uuid = None
     load_vectors = None
     neo4j = None
+    new_uuidv7 = None
 
 
 class VectorSchemaTest(unittest.TestCase):
@@ -92,14 +95,10 @@ class VectorSchemaTest(unittest.TestCase):
         payload = load_vectors()
         uuidv7_data = payload["uuidv7"]
         snid = SNID.from_bytes(bytes.fromhex(uuidv7_data["bytes_hex"]))
-        # Format as standard UUID string: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
         uuid_bytes = snid.to_bytes()
-        uuid_str = f"{uuid_bytes[0]:02x}{uuid_bytes[1]:02x}{uuid_bytes[2]:02x}{uuid_bytes[3]:02x}-" \
-                   f"{uuid_bytes[4]:02x}{uuid_bytes[5]:02x}-" \
-                   f"{uuid_bytes[6]:02x}{uuid_bytes[7]:02x}-" \
-                   f"{uuid_bytes[8]:02x}{uuid_bytes[9]:02x}-" \
-                   f"{uuid_bytes[10]:02x}{uuid_bytes[11]:02x}{uuid_bytes[12]:02x}{uuid_bytes[13]:02x}{uuid_bytes[14]:02x}{uuid_bytes[15]:02x}"
+        uuid_str = snid.to_uuid_string()
         self.assertEqual(uuid_str, uuidv7_data["uuid_string"])
+        self.assertEqual(SNID.parse_uuid_string(uuid_str).to_bytes(), uuid_bytes)
         self.assertEqual(snid.timestamp_millis(), uuidv7_data["timestamp_millis"])
         # Version is in bits 48-51 (byte 6, bits 4-7)
         version = (uuid_bytes[6] >> 4) & 0x0F
@@ -107,6 +106,23 @@ class VectorSchemaTest(unittest.TestCase):
         # Variant is in bits 64-65 (byte 8, bits 6-7)
         variant = (uuid_bytes[8] >> 6) & 0b11
         self.assertEqual(variant, uuidv7_data["variant"])
+
+        generated = SNID.new_uuidv7()
+        generated_bytes = generated.to_bytes()
+        self.assertEqual((generated_bytes[6] >> 4) & 0x0F, 7)
+        self.assertEqual((generated_bytes[8] >> 6) & 0b11, 0b10)
+        module_generated = new_uuidv7()
+        self.assertEqual(
+            module_generated.to_uuid_string(),
+            SNID.parse_uuid_string(module_generated.to_uuid_string()).to_uuid_string(),
+        )
+
+        uuid_obj = uuid.UUID(uuid_str)
+        self.assertEqual(from_uuid(uuid_obj).to_bytes(), uuid_bytes)
+        with self.assertRaises(ValueError):
+            from_uuid(uuid.uuid4())
+        with self.assertRaises(ValueError):
+            SNID.parse_uuid_string("018f1c3e-5a7b-4c8d-9e0f-1a2b3c4d5e6f")
 
     @unittest.skipIf(SNID is None or WID is None or XID is None or KID is None, "snid extension not built")
     def test_composite_targets(self) -> None:
@@ -138,6 +154,42 @@ class VectorSchemaTest(unittest.TestCase):
                 bytes.fromhex(payload["capability"]["key_hex"]),
             )
         )
+
+    @unittest.skipIf(SNID is None, "snid extension not built")
+    def test_crockford_base32_encoding(self):
+        """Test Crockford Base32 encoding"""
+        id = SNID.new_fast()
+        base32 = id.to_base32()
+        self.assertIsNotNone(base32)
+        self.assertTrue(len(base32) > 0)
+        # Crockford Base32 should only contain valid characters
+        for c in base32:
+            self.assertTrue(c.isalnum())
+
+    @unittest.skipIf(SNID is None, "snid extension not built")
+    def test_crockford_base32_consistency(self):
+        """Test Crockford Base32 encoding consistency"""
+        id = SNID.new_fast()
+        base32_1 = id.to_base32()
+        base32_2 = id.to_base32()
+        self.assertEqual(base32_1, base32_2)
+
+    @unittest.skipIf(SNID is None, "snid extension not built")
+    def test_new_safe(self):
+        """Test Public-Safe Mode generator"""
+        id = SNID.new_safe()
+        self.assertIsNotNone(id)
+        # Check that it's a valid 16-byte ID
+        self.assertEqual(len(id.to_bytes()), 16)
+
+    @unittest.skipIf(SNID is None, "snid extension not built")
+    def test_new_safe_uniqueness(self):
+        """Test uniqueness of safe IDs"""
+        ids = set()
+        for _ in range(100):
+            id = SNID.new_safe()
+            ids.add(id.to_bytes())
+        self.assertEqual(len(ids), 100)
 
 
 if __name__ == "__main__":

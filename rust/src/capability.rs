@@ -21,7 +21,8 @@ impl Kid {
         if key.is_empty() {
             return Err(Error::InvalidKey);
         }
-        let mut mac = <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+        let mut mac =
+            <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&actor.0);
         mac.update(resource);

@@ -256,7 +256,7 @@ invalid UUID format
 **Solution:**
 ```go
 // Ensure correct UUID format
-uuid, err := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
+id, err := snid.ParseUUIDString("018f1c3e-5a7b-7c8d-9e0f-1a2b3c4d5e6f")
 if err != nil {
     // Handle error
 }

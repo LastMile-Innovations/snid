@@ -86,7 +86,7 @@ The SNID byte layout maps to UUIDv7 as follows:
 ### Implementation Requirements
 
 All implementations must:
-1. Provide `NewUUIDv7()` / `GenerateV7()` functions that produce RFC 9562-compliant UUIDv7 bytes
+1. Provide one UUIDv7 generation API per language that produces RFC 9562-compliant UUIDv7 bytes
 2. Support both standard UUID string format and raw 16-byte binary
 3. Include UUIDv7 compatibility vectors in conformance testing
 4. Validate against reference implementations in CI/CD
@@ -102,6 +102,8 @@ Canonical wire format:
 Rules:
 - `ATOM` is an uppercase canonical atom.
 - `payload` is Base58 encoding of the 16-byte SNID with one CRC8-derived check digit appended.
+- Base58 uses the Bitcoin alphabet `123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`.
+- Leading zero bytes are represented by leading `1` characters and parsers reject non-canonical extra leading `1` characters.
 - `_` is accepted only as a compatibility delimiter and is never canonical output.
 - Wire strings remain the canonical API, debug, and audit representation for 16-byte SNIDs.
 
@@ -171,7 +173,7 @@ KEY:<public_snid>_<opaque_secret>
 ```
 
 - Public head is a tenant-routable SNID
-- Secret is opaque Base58 plus checksum
+- Secret is opaque canonical Base58 plus a CRC8-derived check character
 - The dual-part form is canonical; the secret is not interpreted as a SNID
 
 ### EID

@@ -1,10 +1,6 @@
 package snid
 
-import (
-	"testing"
-
-	"github.com/google/uuid"
-)
+import "testing"
 
 var (
 	benchAtom       Atom
@@ -17,7 +13,6 @@ var (
 	benchString     string
 	benchTensorHi   int64
 	benchTensorLo   int64
-	benchUUID       uuid.UUID
 	benchUUIDString string
 )
 
@@ -26,20 +21,18 @@ var (
 // - TurboStreamer.Next target: ~1.7ns (hot loop, single-thread)
 // - NewBurst target: ~2μs for 1000 IDs (batch mode)
 
-// Industry Standard Baseline: UUIDv7
 func BenchmarkUUIDv7New(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		id, _ := uuid.NewV7()
-		benchUUID = id
+		benchID = NewUUIDv7()
 	}
 }
 
 func BenchmarkUUIDv7NewString(b *testing.B) {
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		id, _ := uuid.NewV7()
-		benchUUIDString = id.String()
+		benchUUIDString = NewUUIDv7().UUIDString()
 	}
 }
 
@@ -90,7 +83,6 @@ func BenchmarkLIDVerifyParallel(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			benchBool = lid.Verify(prev, payload, key)
@@ -104,7 +96,6 @@ func BenchmarkLIDVerifyParallel(b *testing.B) {
 func BenchmarkBIDWireFormat(b *testing.B) {
 	bid := NewBIDFromContent([]byte("file_content_buffer"))
 	b.ReportAllocs()
-	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		benchBIDWire = bid.WireFormat()
 	}
@@ -120,6 +111,7 @@ func BenchmarkEIDNew(b *testing.B) {
 func BenchmarkSNIDToTensorWords(b *testing.B) {
 	id := NewFast()
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		benchTensorHi, benchTensorLo = id.ToTensorWords()
 	}
@@ -128,6 +120,7 @@ func BenchmarkSNIDToTensorWords(b *testing.B) {
 func BenchmarkSNIDToLLMFormat(b *testing.B) {
 	id := NewFast()
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		benchLLM = id.ToLLMFormat(Matter)
 	}
@@ -136,6 +129,7 @@ func BenchmarkSNIDToLLMFormat(b *testing.B) {
 func BenchmarkSNIDDeterministicIngestID(b *testing.B) {
 	hash := []byte("bench-content")
 	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		benchID = NewDeterministicIngestID(1700000000123, hash)
 	}
@@ -145,5 +139,32 @@ func BenchmarkNewBurst(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		benchIDs = NewBurst(1000)
+	}
+}
+
+func BenchmarkNewBurst100(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		benchIDs = NewBurst(100)
+	}
+}
+
+func BenchmarkNewBurst10000(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		benchIDs = NewBurst(10000)
+	}
+}
+
+func BenchmarkParseUUIDString(b *testing.B) {
+	id := NewUUIDv7()
+	uuidStr := id.UUIDString()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		benchID, benchErr = ParseUUIDString(uuidStr)
+		if benchErr != nil {
+			b.Fatalf("ParseUUIDString: %v", benchErr)
+		}
 	}
 }

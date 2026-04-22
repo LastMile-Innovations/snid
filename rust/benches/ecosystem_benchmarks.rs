@@ -1,23 +1,21 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use snid::Snid;
-use uuid::Uuid;
-use ulid::Ulid;
 use ksuid::Ksuid;
-use xid::Xid;
+use snid::Snid;
 use sonyflake::Sonyflake;
-use cuid::Cuid;
+use ulid::Ulid;
+use uuid::Uuid;
 
 // Industry Standard Baseline: UUIDv7
 fn bench_uuidv7_new(c: &mut Criterion) {
     c.bench_function("uuidv7_new", |b| {
-        b.iter(|| black_box(Uuid::new_v7()));
+        b.iter(|| black_box(uuid::Uuid::now_v7()));
     });
 }
 
 // SNID Baseline
 fn bench_snid_new(c: &mut Criterion) {
     c.bench_function("snid_new", |b| {
-        b.iter(|| black_box(Snid::new()));
+        b.iter(|| black_box(Snid::new_fast()));
     });
 }
 
@@ -35,26 +33,14 @@ fn bench_ulid_new(c: &mut Criterion) {
 
 fn bench_ksuid_new(c: &mut Criterion) {
     c.bench_function("ksuid_new", |b| {
-        b.iter(|| black_box(Ksuid::new()));
-    });
-}
-
-fn bench_xid_new(c: &mut Criterion) {
-    c.bench_function("xid_new", |b| {
-        b.iter(|| black_box(Xid::new()));
+        b.iter(|| black_box(Ksuid::new(0, [0u8; 16])));
     });
 }
 
 fn bench_sonyflake_new(c: &mut Criterion) {
-    let sf = Sonyflake::new();
+    let sf = Sonyflake::new().expect("Sonyflake init");
     c.bench_function("sonyflake_new", |b| {
-        b.iter(|| black_box(sf.next_id()));
-    });
-}
-
-fn bench_cuid_new(c: &mut Criterion) {
-    c.bench_function("cuid_new", |b| {
-        b.iter(|| black_box(Cuid::new()));
+        b.iter(|| black_box(sf.next_id().expect("Sonyflake next_id")));
     });
 }
 
@@ -65,8 +51,6 @@ criterion_group!(
     bench_uuid_new,
     bench_ulid_new,
     bench_ksuid_new,
-    bench_xid_new,
-    bench_sonyflake_new,
-    bench_cuid_new
+    bench_sonyflake_new
 );
 criterion_main!(ecosystem_benches);

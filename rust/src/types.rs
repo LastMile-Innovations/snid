@@ -9,10 +9,12 @@ use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Nid(pub [u8; 32]);
 
 impl Nid {
+    #[inline(always)]
     pub fn from_parts(head: Snid, semantic_hash: [u8; 16]) -> Self {
         let mut out = [0u8; 32];
         out[..16].copy_from_slice(&head.0);
@@ -20,18 +22,21 @@ impl Nid {
         Self(out)
     }
 
+    #[inline(always)]
     pub fn head(&self) -> Snid {
         let mut out = [0u8; 16];
         out.copy_from_slice(&self.0[..16]);
         Snid(out)
     }
 
+    #[inline(always)]
     pub fn semantic_hash(&self) -> [u8; 16] {
         let mut out = [0u8; 16];
         out.copy_from_slice(&self.0[16..]);
         out
     }
 
+    #[inline(always)]
     pub fn quantize(vector: &[f32]) -> [u8; 16] {
         let mut out = [0u8; 16];
         for (i, value) in vector.iter().take(128).enumerate() {
@@ -42,14 +47,17 @@ impl Nid {
         out
     }
 
+    #[inline(always)]
     pub fn hamming_distance(&self, other: &Nid) -> u32 {
-        self.semantic_hash()
-            .iter()
-            .zip(other.semantic_hash())
-            .map(|(a, b)| (a ^ b).count_ones())
-            .sum()
+        // Direct byte comparison without allocations for performance
+        let mut distance = 0u32;
+        for i in 16..32 {
+            distance += (self.0[i] ^ other.0[i]).count_ones();
+        }
+        distance
     }
 
+    #[inline(always)]
     pub fn to_tensor256_words(&self) -> (i64, i64, i64, i64) {
         (
             i64::from_be_bytes(self.0[0..8].try_into().unwrap()),
@@ -58,9 +66,20 @@ impl Nid {
             i64::from_be_bytes(self.0[24..32].try_into().unwrap()),
         )
     }
+
+    /// Generate a batch of NIDs from a single head with varying semantic hashes
+    /// Reduces allocations by pre-allocating the output vector
+    pub fn batch_from_head(head: Snid, semantic_hashes: &[[u8; 16]]) -> Vec<Self> {
+        let mut out = Vec::with_capacity(semantic_hashes.len());
+        for semantic_hash in semantic_hashes {
+            out.push(Self::from_parts(head, *semantic_hash));
+        }
+        out
+    }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Lid(pub [u8; 32]);
 
 impl Lid {
@@ -73,7 +92,8 @@ impl Lid {
         if key.is_empty() {
             return Err(Error::InvalidKey);
         }
-        let mut mac = <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+        let mut mac =
+            <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&prev);
         mac.update(payload);
@@ -99,7 +119,8 @@ impl Lid {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Wid(pub [u8; 32]);
 
 impl Wid {
@@ -126,7 +147,8 @@ impl Wid {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Xid(pub [u8; 32]);
 
 impl Xid {
@@ -153,7 +175,8 @@ impl Xid {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Kid(pub [u8; 32]);
 
 impl Kid {
@@ -167,7 +190,8 @@ impl Kid {
         if key.is_empty() {
             return Err(Error::InvalidKey);
         }
-        let mut mac = <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+        let mut mac =
+            <HmacSha256 as hmac::Mac>::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&actor.0);
         mac.update(resource);
@@ -201,7 +225,8 @@ impl Kid {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
 pub struct Eid(pub u64);
 
 impl Eid {
@@ -222,7 +247,7 @@ impl Eid {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Bid {
     pub topology: Snid,
     pub content: [u8; 32],
@@ -235,8 +260,8 @@ impl Bid {
 
     pub fn wire(&self) -> Result<String, Error> {
         let payload = encode_payload(self.topology.0);
-        let content = base32::encode(Alphabet::Rfc4648 { padding: false }, &self.content)
-            .to_lowercase();
+        let content =
+            base32::encode(Alphabet::Rfc4648 { padding: false }, &self.content).to_lowercase();
         Ok(format!("CAS:{payload}:{content}"))
     }
 

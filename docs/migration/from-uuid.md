@@ -46,8 +46,8 @@ WHERE snid_id IS NULL;
 
 **Go:**
 ```go
-func convertUUIDToSNID(uuid uuid.UUID) snid.ID {
-    return snid.ID(uuid)
+func convertUUIDToSNID(uuidString string) (snid.ID, error) {
+    return snid.ParseUUIDString(uuidString)
 }
 ```
 
@@ -83,9 +83,7 @@ ALTER TABLE items DROP COLUMN uuid_id;
 
 **Before (UUID):**
 ```go
-import "github.com/google/uuid"
-
-id := uuid.New()
+id := oldUUIDv7Generator()
 ```
 
 **After (SNID):**
@@ -218,7 +216,7 @@ uuidStr := id.UUIDString() // "018f1c3e-5a7b-7c8d-9e0f-1a2b3c4d5e6f"
 // Parse from UUID string
 parsed, err := snid.ParseUUIDString("018f1c3e-5a7b-7c8d-9e0f-1a2b3c4d5e6f")
 
-// Convert to/from github.com/google/uuid.UUID
+// Convert to/from SNID's dependency-free UUID value
 uuidObj := id.ToUUIDv7()
 fromUUID, err := snid.FromUUIDv7(uuidObj)
 ```
@@ -228,7 +226,7 @@ fromUUID, err := snid.FromUUIDv7(uuidObj)
 use snid::Snid;
 
 // Generate UUIDv7-compatible ID
-let id = Snid::new();
+let id = Snid::uuidv7();
 
 // Format as UUID string
 let uuid_str = id.to_uuid_string();
@@ -274,7 +272,7 @@ If you're already using UUIDv7, migration is trivial:
 1. **Replace generator calls:**
    ```go
    // Before
-   id := uuid.NewV7()
+   id := oldUUIDv7Generator()
 
    // After
    id := snid.NewUUIDv7()
@@ -315,7 +313,7 @@ SNID is byte-compatible with UUID v7:
 uuid := id.UUID()
 
 // Convert UUID to SNID
-snid := snid.ID(uuid)
+id = snid.FromUUID(uuid)
 ```
 
 ### Legacy UUID Support
@@ -325,14 +323,15 @@ If you need to support legacy UUIDs:
 ```go
 func ParseID(s string) (snid.ID, error) {
     if len(s) == 36 {
-        // UUID format
-        u, err := uuid.Parse(s)
+        // Strict UUIDv7 format
+        id, err := snid.ParseUUIDString(s)
         if err == nil {
-            return snid.ID(u), nil
+            return id, nil
         }
     }
     // SNID format
-    return snid.FromString(s)
+    id, _, err := snid.FromString(s)
+    return id, err
 }
 ```
 
@@ -354,7 +353,7 @@ SELECT snid_id FROM items ORDER BY snid_id LIMIT 10;
 // Benchmark UUID vs SNID
 func BenchmarkUUID(b *testing.B) {
     for i := 0; i < b.N; i++ {
-        uuid.New()
+        snid.NewUUIDv7()
     }
 }
 

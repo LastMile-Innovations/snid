@@ -240,9 +240,11 @@ See the [examples/](examples/) directory for runnable code:
 
 ## Performance
 
-- **Go**: ~3.7ns per ID (NewFast), ~1.7ns (TurboStreamer hot loop)
-- **Rust**: Deterministic, zero-allocation paths
-- **Python**: Native batch generation with zero-copy NumPy/PyArrow/Polars support
+- **Go**: ~3.7ns per ID (NewFast), ~1.7ns (TurboStreamer hot loop), ~2μs for 1000 batch
+- **Rust**: ~6.4ns per ID (new_fast), ~28ns for UUID string formatting
+- **Python**: ~15ns per ID (native bindings), 6.4ms for 100k batch (bytes), 9.8ms (numpy), 19.6ms (tensor)
+
+See [Performance Benchmarks](docs/performance/benchmarks.md) for detailed results.
 
 ## Contributing
 

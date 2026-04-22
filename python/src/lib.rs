@@ -23,6 +23,13 @@ impl PySnid {
     }
 
     #[staticmethod]
+    fn new_safe() -> Self {
+        Self {
+            inner: Snid::new_safe(),
+        }
+    }
+
+    #[staticmethod]
     fn from_bytes(data: Vec<u8>) -> PyResult<Self> {
         if data.len() != 16 {
             return Err(PyValueError::new_err("expected 16 bytes"));
@@ -44,8 +51,30 @@ impl PySnid {
         self.inner.to_bytes().to_vec()
     }
 
+    #[staticmethod]
+    fn new_uuidv7() -> Self {
+        Self {
+            inner: Snid::uuidv7(),
+        }
+    }
+
+    fn to_uuid_string(&self) -> String {
+        self.inner.to_uuid_string()
+    }
+
+    #[staticmethod]
+    fn parse_uuid_string(value: &str) -> PyResult<Self> {
+        Ok(Self {
+            inner: Snid::from_uuid_string(value).map_err(py_err)?,
+        })
+    }
+
     fn to_wire(&self, atom: &str) -> PyResult<String> {
         self.inner.to_wire(atom).map_err(py_err)
+    }
+
+    fn to_base32(&self) -> String {
+        self.inner.to_base32()
     }
 
     fn to_tensor(&self) -> (i64, i64) {

@@ -34,17 +34,17 @@ Bits 66-127:   rand_b (62 bits) - random
 import "github.com/LastMile-Innovations/snid"
 
 uuidv7 := snid.NewUUIDv7()
-string := uuidv7.String()  // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-bytes := uuidv7.Bytes()    // [16]byte
+string := uuidv7.UUIDString() // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+bytes := uuidv7.Bytes()       // []byte
 ```
 
 **Rust:**
 ```rust
-use snid::SNID;
+use snid::Snid;
 
-let uuidv7 = SNID::uuidv7();
-let string = uuidv7.to_string();  // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-let bytes = uuidv7.as_bytes();   // &[u8; 16]
+let uuidv7 = Snid::uuidv7();
+let string = uuidv7.to_uuid_string(); // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+let bytes = uuidv7.to_bytes();        // [u8; 16]
 ```
 
 **Python:**
@@ -52,28 +52,25 @@ let bytes = uuidv7.as_bytes();   // &[u8; 16]
 import snid
 
 uuidv7 = snid.SNID.new_uuidv7()
-string = str(uuidv7)  # xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-bytes = uuidv7.bytes   # bytes
+string = uuidv7.to_uuid_string()  # xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+bytes = uuidv7.to_bytes()         # bytes
 ```
 
 ### Migration
 
 **From UUIDv7 to SNID:**
 ```go
-// Existing UUIDv7
-uuidv7 := uuid.MustParse("0189abcd-1234-5678-9abc-0123456789ab")
-
 // Convert to SNID
-snid := snid.FromUUID(uuidv7)
+id, err := snid.ParseUUIDString("0189abcd-1234-7abc-9abc-0123456789ab")
 ```
 
 **From SNID to UUIDv7:**
 ```go
 // Existing SNID
-snid := snid.NewFast()
+id := snid.NewUUIDv7()
 
 // Convert to UUIDv7
-uuidv7 := snid.ToUUID()
+uuidv7 := id.ToUUIDv7()
 ```
 
 ### Compatibility
@@ -302,36 +299,11 @@ Use TSID mode when:
 - Interoperating with Java/Spring systems
 - Need compact time-ordered IDs
 
-## Unified Generator
-
-SNID provides a unified generator API for all modes:
-
-**Go:**
-```go
-id, err := snid.Generate(snid.ModeUUIDv7)
-id, err := snid.Generate(snid.ModeULID)
-id, err := snid.Generate(snid.ModeNanoID)
-```
-
-**Rust:**
-```rust
-let id = SNID::generate(Mode::UUIDv7)?;
-let id = SNID::generate(Mode::ULID)?;
-let id = SNID::generate(Mode::NanoID)?;
-```
-
-**Python:**
-```python
-id = snid.SNID.generate("uuidv7")
-id = snid.SNID.generate("ulid")
-id = snid.SNID.generate("nanoid")
-```
-
 ## Decision Table
 
-| I want… | Use This Mode | Why |
+| I want… | Use This API | Why |
 |---------|---------------|-----|
-| Exact UUIDv7 compatibility | `ModeUUIDv7` | Byte-for-byte RFC 9562 compatible |
+| Exact UUIDv7 compatibility | `NewUUIDv7()` / `Snid::uuidv7()` / `snid.new_uuidv7()` | Byte-for-byte RFC 9562 compatible |
 | Human-readable sortable string | `ModeULID` | 26-char Crockford Base32 |
 | Shortest URL-friendly ID | `ModeNanoID` | 21 chars by default, configurable |
 | 20-byte time-ordered ID | `ModeKSUID` | Go ecosystem compatible |

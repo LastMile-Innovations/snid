@@ -18,16 +18,17 @@ Time to create one ID (in nanoseconds/microseconds) under load.
 ### Methodology
 
 **Setup:**
-- Run 100,000+ iterations per test (10 full runs minimum)
-- Warmup phase: 25,000+ iterations to JIT-compile and warm CPU caches
-- High-precision timing: Go `testing.B`, Rust `criterion`, Python `time.perf_counter_ns()`
+- Run 100,000+ iterations per test (5 full runs minimum with statistical analysis)
+- Warmup phase: 3 iterations to JIT-compile and warm CPU caches
+- High-precision timing: Go `testing.B`, Rust `criterion`, Python `time.perf_counter()`
+- Statistical reporting: Mean ± stddev for Python benchmarks
 - Concurrency test: Multiple workers (10 threads) generating IDs simultaneously
 
 **Libraries to Test:**
 - SNID (Go, Rust, Python) - native mode
 - SNID (Go, Rust, Python) - UUIDv7-compatible mode
-- UUIDv7 (google/uuid, uuid crate, Python uuid)
-- UUIDv4 (google/uuid, uuid crate, Python uuid)
+- UUIDv7 (external Go/Rust/Python libraries)
+- UUIDv4 (external Go/Rust/Python libraries)
 - ULID (oklog/ulid, ulid crate, ulid-py)
 - NanoID (nanoid, nanoid crate, python-nanoid)
 - Snowflake (sonyflake, sonyflake crate)
@@ -132,7 +133,7 @@ func benchmarkInsert(db *sql.DB, idType string, rows int) time.Duration {
         case "snid_binary":
             id = snid.NewFast().ToHex()
         case "uuidv7":
-            id = uuid.NewV7().String()
+            id = snid.NewUUIDv7().UUIDString()
         // ... other types
         }
         stmt.Exec(id, "test data")

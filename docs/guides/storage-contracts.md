@@ -61,7 +61,7 @@ import psycopg2
 id = snid.SNID.new_fast()
 cursor.execute(
     "INSERT INTO items (id, name) VALUES (%s, %s)",
-    (id.to_uuid(), "item name")
+    (id.to_uuid_string(), "item name")
 )
 ```
 

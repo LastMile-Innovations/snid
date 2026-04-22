@@ -279,7 +279,7 @@ func (s *adaptiveShard) genFast() ID {
 
 	if ms > s.lastMS {
 		s.lastMS = ms
-		s.sequence = 0
+		s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 	} else {
 		s.sequence++
 		if s.sequence > 0xFFF {
@@ -287,7 +287,7 @@ func (s *adaptiveShard) genFast() ID {
 			// For speed, we just force forward
 			s.lastMS++
 			ms = s.lastMS
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		}
 	}
 
@@ -316,13 +316,13 @@ func (s *adaptiveShard) genSecure() ID {
 	ms := unixMilliCoarse()
 	if ms > s.lastMS {
 		s.lastMS = ms
-		s.sequence = 0
+		s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 	} else {
 		s.sequence++ // Logical tick
 		if s.sequence > 0xFFF {
 			s.lastMS++
 			ms = s.lastMS
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		} else {
 			ms = s.lastMS // Stick to logical time
 		}
@@ -357,13 +357,13 @@ func (s *adaptiveShard) batchFast(n int) []ID {
 		ms := unixMilliCoarse()
 		if ms > s.lastMS {
 			s.lastMS = ms
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		} else {
 			s.sequence++
 			if s.sequence > 0xFFF {
 				s.lastMS++
 				ms = s.lastMS
-				s.sequence = 0
+				s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 			}
 		}
 
@@ -391,13 +391,13 @@ func (s *adaptiveShard) batchSecure(n int) []ID {
 		ms := unixMilliCoarse()
 		if ms > s.lastMS {
 			s.lastMS = ms
-			s.sequence = 0
+			s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 		} else {
 			s.sequence++
 			if s.sequence > 0xFFF {
 				s.lastMS++
 				ms = s.lastMS
-				s.sequence = 0
+				s.sequence = randomSeqStart(&s.s0, &s.s1, &s.s2, &s.s3)
 			} else {
 				ms = s.lastMS
 			}

@@ -12,7 +12,7 @@ The canonical wire format is:
 
 Where:
 - `ATOM` is an uppercase canonical atom (type tag)
-- `payload` is Base58 encoding of the 16-byte SNID with CRC8 checksum
+- `payload` is Base58 encoding of the 16-byte SNID with one CRC8-derived check character
 - `_` is accepted as a compatibility delimiter but never canonical output
 
 ## Canonical Atoms
@@ -58,6 +58,8 @@ These atoms are accepted at parse time and normalized:
 ```
 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
 ```
+
+The alphabet is Bitcoin Base58. It excludes `0`, `O`, `I`, `l`, `+`, and `/`; leading zero bytes are represented by leading `1` characters.
 
 ### Checksum
 
@@ -143,6 +145,8 @@ MAT:2xXFhP9w7V4sKjBnG8mQpL   # Canonical
 ```
 KEY:<public_snid>_<opaque_secret>
 ```
+
+The public side is a normal `KEY:<payload>` SNID wire string. The secret side is canonical Base58 over secret bytes plus its own CRC8-derived check character; it is not parsed as a SNID payload.
 
 **Go:**
 ```go

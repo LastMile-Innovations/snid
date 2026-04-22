@@ -64,23 +64,23 @@ func main() {
 ### Rust
 
 ```rust
-use snid::SNID;
+use snid::Snid;
 
 fn main() {
     // Generate a new SNID (native mode)
-    let id = SNID::new();
-    println!("Generated ID: {}", id);
+    let id = Snid::new_fast();
+    println!("Generated ID: {:?}", id);
 
     // Format as wire string with atom
-    let wire = id.to_wire("MAT");
+    let wire = id.to_wire("MAT").expect("Failed to format");
     println!("Wire format: {}", wire);
 
     // Parse a wire string
-    let (parsed, atom) = SNID::parse_wire(&wire).expect("Failed to parse");
-    println!("Parsed ID: {} (atom: {})", parsed, atom);
+    let (parsed, atom) = Snid::parse_wire(&wire).expect("Failed to parse");
+    println!("Parsed ID: {:?} (atom: {})", parsed, atom);
 
     // UUIDv7-compatible mode (drop-in replacement)
-    let uuidv7 = SNID::new();
+    let uuidv7 = Snid::uuidv7();
     let uuid_str = uuidv7.to_uuid_string();
     println!("UUIDv7 string: {}", uuid_str);
 }

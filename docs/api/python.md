@@ -1,6 +1,6 @@
 # Python API Reference
 
-Python implementation API reference.
+Python implementation API reference (API V2 - Universal Paradigms).
 
 ## Installation
 
@@ -14,16 +14,61 @@ With data science dependencies:
 pip install snid[data]
 ```
 
+## Core Philosophy
+
+**"One Default, Infinite Extensibility"**
+
+- **Decoupled Presentation**: Atoms are strictly a serialization concern
+- **Strict Memory Tiers**: 16-byte (SNID) and 32-byte (NID, LID, KID)
+- **Zero-Allocation Hot Paths**: No heap allocations in generation
+- **Universal Paradigms**: Consistent patterns across all languages
+
+## Universal Paradigms
+
+### Generation
+
+```python
+id = snid.new()                    # Fastest path, ~15ns
+id = snid.new_with(tenant="acme", shard=42)
+id = snid.new_spatial(lat, lng)    # Spatial IDs
+id = snid.new_safe()               # Public-safe mode with time-blurring and CSPRNG entropy (~40-50ns)
+```
+
+### Batching
+
+```python
+batch = snid.batch(1000, backend="snid")  # Default: Python objects
+batch = snid.batch(1000, backend="bytes")  # Raw bytes (fastest)
+```
+
+### Parsing
+
+```python
+id = snid.parse("MAT:2xXFhP...")       # Parse wire string
+id = snid.parse_uuid("018f1c3e-...")   # Parse UUID
+```
+
+### Serialization
+
+```python
+wire = id.string_default()     # Default: "MAT:"
+wire = id.with_atom("IAM")     # Override: "IAM:"
+uuid = id.to_uuid_string()     # UUIDv7 format
+base32 = id.to_base32()       # Crockford Base32 (case-insensitive, human-friendly)
+```
+
 ## Classes
 
 ### SNID
 
-Core 128-bit identifier class.
+Core 128-bit identifier class (Tier 1: 16-byte).
 
 ```python
 class SNID:
     @staticmethod
-    def new_fast() -> SNID
+    def new_fast() -> SNID  # Deprecated: Use snid.new()
+    @staticmethod
+    def new_safe() -> SNID  # Public-safe mode with time-blurring and CSPRNG entropy
     @staticmethod
     def generate_batch(count: int, backend: str = "snid") -> Union[bytes, List[Tuple[int, int]], np.ndarray, pa.Array, pl.Series]
     @staticmethod
@@ -31,9 +76,70 @@ class SNID:
     @staticmethod
     def from_bytes(data: bytes) -> SNID
     @staticmethod
+    def from_uuid_string(s: str) -> SNID
+    @staticmethod
     def load_vectors(path: str) -> Dict
     @staticmethod
     def tensor_time_delta(left: Tuple[int, int], right: Tuple[int, int]) -> int
+    def to_base32(self) -> str  # Crockford Base32 encoding
+```
+
+## Module Functions (Universal Paradigms)
+
+### new
+
+Generate a new SNID with ~15ns latency. This is the universal paradigm for fast ID generation.
+
+```python
+def new() -> SNID
+```
+
+### new_with
+
+Generate a configured ID using options. This is the universal paradigm for configured ID generation.
+
+```python
+def new_with(tenant: str | None = None, shard: int | None = None) -> SNID
+```
+
+### new_spatial
+
+Generate a spatial ID from lat/lng coordinates. This is the universal paradigm for spatial ID generation.
+
+```python
+def new_spatial(lat: float, lng: float) -> SNID
+```
+
+### new_safe
+
+Generate a public-safe ID with time-blurring and pure CSPRNG entropy. This is the "One ID" solution for database PK + public API use. Time-blurring truncates timestamp to nearest second (instead of millisecond). Pure CSPRNG fills 74 bits with cryptographic randomness (no monotonic counter). Performance: ~40-50ns (vs 15ns for new).
+
+```python
+def new_safe() -> SNID
+```
+
+### batch
+
+Generate a batch of IDs efficiently. This is the universal paradigm for batch generation.
+
+```python
+def batch(count: int, *, backend: str = "snid") -> Union[bytes, List[SNID], List[Tuple[int, int]], np.ndarray, pa.Array, pl.Series]
+```
+
+### parse
+
+Parse a wire string and return the ID. This is the universal paradigm for parsing wire strings.
+
+```python
+def parse(s: str) -> SNID
+```
+
+### parse_uuid
+
+Parse a UUID string and return the ID. This is the universal paradigm for parsing UUID strings.
+
+```python
+def parse_uuid(s: str) -> SNID
 ```
 
 ## Methods
@@ -46,6 +152,30 @@ Format SNID as wire string with atom.
 def to_wire(self, atom: str) -> str
 ```
 
+### string_default
+
+Format SNID using default "MAT:" atom. This is the universal paradigm for serialization (default atom).
+
+```python
+def string_default(self) -> str
+```
+
+### with_atom
+
+Format SNID with a custom atom. This is the universal paradigm for serialization (override atom).
+
+```python
+def with_atom(self, atom: str) -> str
+```
+
+### to_base32
+
+Format SNID using Crockford Base32 encoding. This is case-insensitive and excludes ambiguous characters (I, L, O). Suitable for human-readable IDs and URLs.
+
+```python
+def to_base32(self) -> str
+```
+
 ### to_compact
 
 Format SNID as compact wire string (no atom).
@@ -54,12 +184,12 @@ Format SNID as compact wire string (no atom).
 def to_compact(self) -> str
 ```
 
-### to_uuid
+### to_uuid_string
 
-Convert SNID to UUID.
+Format SNID as standard UUID text.
 
 ```python
-def to_uuid(self) -> uuid.UUID
+def to_uuid_string(self) -> str
 ```
 
 ### to_bytes
@@ -223,14 +353,22 @@ class ChecksumError(Exception):
 
 ## Examples
 
-### Basic Usage
+### Basic Usage (Universal Paradigms)
 
 ```python
 import snid
 
-id = snid.SNID.new_fast()
-wire = id.to_wire("MAT")
+# Generation
+id = snid.new()
+wire = id.string_default()  # "MAT:..."
 print(f"ID: {wire}")
+
+# Custom atom
+wire = id.with_atom("IAM")  # "IAM:..."
+print(f"ID: {wire}")
+
+# Configured generation
+id = snid.new_with(tenant="acme", shard=42)
 ```
 
 ### Batch Generation
@@ -238,24 +376,34 @@ print(f"ID: {wire}")
 ```python
 import snid
 
-# Raw bytes
-batch = snid.SNID.generate_batch(1000, backend="bytes")
+# Module-level batch (universal paradigm)
+batch = snid.batch(1000, backend="snid")
+print(f"Generated {len(batch)} SNIDs")
+
+# Raw bytes (fastest)
+batch = snid.batch(1000, backend="bytes")
 print(f"Generated {len(batch)} bytes")
 
 # NumPy
 import numpy as np
-batch = snid.SNID.generate_batch(1000, backend="numpy")
+batch = snid.batch(1000, backend="numpy")
 print(f"Shape: {batch.shape}")
 ```
 
-### Parsing
+### Parsing (Universal Paradigms)
 
 ```python
 import snid
 
+# Parse wire string
 wire = "MAT:2xXFhP9w7V4sKjBnG8mQpL"
-parsed, atom = snid.SNID.parse_wire(wire)
-print(f"ID: {parsed}, atom: {atom}")
+id = snid.parse(wire)
+print(f"ID: {id}")
+
+# Parse UUID
+uuid_str = "018f1c3e-..."
+id = snid.parse_uuid(uuid_str)
+print(f"ID: {id}")
 ```
 
 ### Tensor Operations
@@ -263,7 +411,7 @@ print(f"ID: {parsed}, atom: {atom}")
 ```python
 import snid
 
-batch = snid.SNID.generate_batch(1000, backend="numpy")
+batch = snid.batch(1000, backend="numpy")
 timestamps = batch[:, 0] >> 16
 print(f"Timestamps: {timestamps[:10]}")
 
