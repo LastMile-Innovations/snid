@@ -9,7 +9,7 @@ repository = "https://github.com/LastMile-Innovations/snid"
 homepage = "https://github.com/LastMile-Innovations/snid"
 documentation = "https://docs.rs/snid"
 readme = "README.md"
-keywords = ["uuid", "identifier", "sortable", "distributed", "id", "ulid", "uuidv7", "spatial", "neural"]
+keywords = ["uuid", "uuidv7", "identifier", "sortable", "distributed"]
 categories = ["data-structures", "encoding", "development-tools::build-utils"]
 authors = ["Neighbor Systems <hello@neighbor.systems>"]
 
