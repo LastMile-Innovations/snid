@@ -1,11 +1,11 @@
 # Multi-stage Dockerfile for SNID Benchmarking Platform
-# Supports Go 1.24, Rust 2021 edition, Python 3.12
+# Supports Go 1.25, Rust 2021 edition, Python 3.12
 # Optimized for Railway deployment with volume persistence
 
 # =============================================================================
 # Stage 1: Base with all build tools
 # =============================================================================
-FROM golang:1.24 AS base
+FROM golang:1.25 AS base
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y

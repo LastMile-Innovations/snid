@@ -30,7 +30,7 @@ jobs:
       - name: Wait for PostgreSQL
         run: |
           for i in {1..30}; do
-            if docker exec -it snid-bench-postgres-1 pg_isready; then
+            if docker exec snid-bench-postgres pg_isready; then
               echo "PostgreSQL is ready"
               break
             fi

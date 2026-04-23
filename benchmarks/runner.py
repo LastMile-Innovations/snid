@@ -85,6 +85,11 @@ def run_ecosystem_benchmark():
     return run_command("python benchmarks/ecosystem_comparison.py")
 
 
+def run_conformance_benchmark():
+    """Run conformance validation benchmark across all languages."""
+    return run_command("python benchmarks/conformance_runner.py")
+
+
 def main():
     """Main entry point for benchmark runner."""
     # In pure mode, delegate to isolated pure_runner subprocess
@@ -105,6 +110,7 @@ def main():
         "comparison": run_comparison_benchmarks,
         "llm": run_llm_benchmark,
         "ecosystem": run_ecosystem_benchmark,
+        "conformance": run_conformance_benchmark,
     }
 
     # Parse arguments

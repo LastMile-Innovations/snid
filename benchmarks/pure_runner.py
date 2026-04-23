@@ -75,12 +75,29 @@ def run_python_benchmarks():
     }
 
 
+def run_conformance_benchmark():
+    """Run conformance validation with minimal overhead."""
+    result = subprocess.run(
+        ["python3", "benchmarks/conformance_runner.py"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return {
+        "language": "conformance",
+        "returncode": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
+
+
 def main():
     """Run benchmarks in pure mode - no harness overhead."""
     suites = {
         "go": run_go_benchmarks,
         "rust": run_rust_benchmarks,
         "python": run_python_benchmarks,
+        "conformance": run_conformance_benchmark,
     }
 
     # Parse arguments

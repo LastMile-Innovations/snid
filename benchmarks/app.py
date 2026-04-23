@@ -173,6 +173,7 @@ async def dashboard():
                 <button class="suite-btn" onclick="runBenchmark('comparison')">Comparison</button>
                 <button class="suite-btn" onclick="runBenchmark('llm')">LLM</button>
                 <button class="suite-btn" onclick="runBenchmark('ecosystem')">Ecosystem</button>
+                <button class="suite-btn" onclick="runBenchmark('conformance')">Conformance</button>
                 <button class="suite-btn" onclick="runBenchmark('all')">All Suites</button>
             </div>
 
@@ -273,7 +274,7 @@ async def download_result(filename: str):
 @app.post("/run/{suite}")
 async def run_benchmark(suite: str, background_tasks: BackgroundTasks, run_id: Optional[str] = None):
     """Trigger a benchmark run."""
-    valid_suites = ["go", "rust", "python", "comparison", "llm", "ecosystem", "all"]
+    valid_suites = ["go", "rust", "python", "comparison", "llm", "ecosystem", "conformance", "all"]
     if suite not in valid_suites:
         raise HTTPException(status_code=400, detail=f"Invalid suite. Valid: {valid_suites}")
 
