@@ -1,7 +1,4 @@
 [build]
-# Use all available cores for parallel compilation
-jobs = 0
-
 # Enable incremental compilation for debug builds
 incremental = true
 

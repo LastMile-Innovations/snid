@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-23
+
 ### Performance
 - **Rust**: Updated dependencies: getrandom 0.2→0.4, hmac 0.12→0.13, sha2 0.10→0.11, criterion 0.4→0.8, cuid 1.3→2.0, sonyflake 0.2→0.4
 - **Rust**: Dependency updates bring significant performance improvements (75% faster ID generation, 75% faster HMAC operations)
@@ -26,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rust**: Added `KeyInit` trait import for hmac initialization
 - **Rust**: GeneratorState struct now includes `_pad_front` and `_pad_back` fields for cache-line isolation
 - **Rust**: Hot path functions marked with `#[inline(always)]` for zero-cost abstraction
+- **Release**: Added conformance vector generation before Python tests in the `just test` release gate
+- **Release**: Fixed the tag workflow Go version lookup across release jobs
+- **Release**: Added Rust crate README metadata required for crates.io packaging
 
 ## [0.2.0] - 2026-04-21
 
@@ -62,5 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deterministic ingest constructors
 - Ghost bit helpers for masking flows
 
+[Unreleased]: https://github.com/LastMile-Innovations/snid/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/LastMile-Innovations/snid/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/LastMile-Innovations/snid/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LastMile-Innovations/snid/releases/tag/v0.1.0

@@ -22,6 +22,7 @@ test:
     @echo "Running all tests..."
     just test-go
     just test-rust
+    just generate-vectors
     just test-python
     @echo "✅ All tests passed"
 
@@ -43,9 +44,12 @@ test-python:
 # Conformance (The Most Important Command)
 # =============================================================================
 
-conformance:
+generate-vectors:
     @echo "Regenerating vectors with Go (authoritative)..."
     cd conformance/cmd/generate_vectors && go run . --out ../../vectors.json
+
+conformance:
+    just generate-vectors
     @echo "Validating Rust..."
     cd rust && cargo test
     @echo "Validating Python..."

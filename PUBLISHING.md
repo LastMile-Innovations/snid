@@ -129,8 +129,8 @@ cargo publish --dry-run
 
 ### Current Version Status
 
-- **Rust**: `rust/Cargo.toml` - version = "0.2.0"
-- **Python**: `python/pyproject.toml` - version = "0.2.0"
+- **Rust**: `rust/Cargo.toml` - version = "0.2.1"
+- **Python**: `python/pyproject.toml` - version = "0.2.1"
 - **Go**: `go/go.mod` - No version field (uses git tags)
 
 ### Version Bumping Process
