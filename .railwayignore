@@ -1,0 +1,46 @@
+# Build artifacts
+target/
+.gocache/
+.gotmp/
+.gomodcache/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.so
+*.dylib
+*.rlib
+*.rmeta
+*.o
+*.dSYM
+*.test
+*.a
+
+# Benchmark results
+benchmarks/results/
+.benchmarks/
+
+# Conformance artifacts
+conformance/vectors.json
+conformance/artifacts/
+conformance/baselines/
+
+# Python build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CI
+.github/
