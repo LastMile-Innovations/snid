@@ -5,6 +5,7 @@ use crate::core::Snid;
 #[allow(unused_imports)]
 use crate::error::Error;
 #[allow(unused_imports)]
+#[cfg(feature = "data")]
 use crate::types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
 
 #[cfg(feature = "data")]
@@ -173,7 +174,11 @@ mod tests {
     use super::*;
     #[allow(unused_imports)]
     use crate::core::Snid;
+    #[cfg(feature = "data")]
     #[allow(unused_imports)]
+    use crate::helpers::{hex_decode_to, hex_decode_vec, hex_encode_fast};
+    #[allow(unused_imports)]
+    #[cfg(feature = "data")]
     use crate::types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
 
     #[cfg(feature = "data")]
@@ -206,7 +211,7 @@ mod tests {
             assert_eq!(llm_v2.ghosted, case.llm_format_v2.ghosted);
             assert_eq!(expected.time_bin(3_600_000), case.time_bin_hour);
             assert_eq!(
-                hex::encode(expected.with_ghost_bit(true).0),
+                hex_encode_fast(&expected.with_ghost_bit(true).0),
                 case.ghosted_bytes_hex
             );
             let (underscore, _) = Snid::parse_wire(&case.underscore_wire).unwrap();
@@ -224,34 +229,28 @@ mod tests {
         );
 
         let head = Snid::from_hex(&vectors.neural.head_hex).unwrap();
-        let semantic: [u8; 16] = hex::decode(vectors.neural.semantic_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let mut semantic = [0u8; 16];
+        hex_decode_to(&vectors.neural.semantic_hex, &mut semantic).unwrap();
         let nid = Nid::from_parts(head, semantic);
-        assert_eq!(hex::encode(nid.0), vectors.neural.bytes_hex);
+        assert_eq!(hex_encode_fast(&nid.0), vectors.neural.bytes_hex);
         assert_eq!(
             nid.hamming_distance(&Nid([0u8; 32])) as i32,
             vectors.neural.hamming_to_zero
         );
 
         let head = Snid::from_hex(&vectors.ledger.head_hex).unwrap();
-        let prev: [u8; 32] = hex::decode(vectors.ledger.prev_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
-        let payload = hex::decode(vectors.ledger.payload_hex).unwrap();
-        let key = hex::decode(vectors.ledger.key_hex).unwrap();
+        let mut prev = [0u8; 32];
+        hex_decode_to(&vectors.ledger.prev_hex, &mut prev).unwrap();
+        let payload = hex_decode_vec(&vectors.ledger.payload_hex).unwrap();
+        let key = hex_decode_vec(&vectors.ledger.key_hex).unwrap();
         let lid = Lid::from_parts(head, prev, &payload, &key).unwrap();
-        assert_eq!(hex::encode(lid.0), vectors.ledger.bytes_hex);
+        assert_eq!(hex_encode_fast(&lid.0), vectors.ledger.bytes_hex);
 
         let world_head = Snid::from_hex(&vectors.world.head_hex).unwrap();
-        let scenario: [u8; 16] = hex::decode(vectors.world.scenario_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let mut scenario = [0u8; 16];
+        hex_decode_to(&vectors.world.scenario_hex, &mut scenario).unwrap();
         let wid = Wid::from_parts(world_head, scenario);
-        assert_eq!(hex::encode(wid.0), vectors.world.bytes_hex);
+        assert_eq!(hex_encode_fast(&wid.0), vectors.world.bytes_hex);
         assert_eq!(
             wid.to_tensor256_words(),
             (
@@ -263,12 +262,10 @@ mod tests {
         );
 
         let edge_head = Snid::from_hex(&vectors.edge.head_hex).unwrap();
-        let edge_hash: [u8; 16] = hex::decode(vectors.edge.edge_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let mut edge_hash = [0u8; 16];
+        hex_decode_to(&vectors.edge.edge_hex, &mut edge_hash).unwrap();
         let xid = Xid::from_parts(edge_head, edge_hash);
-        assert_eq!(hex::encode(xid.0), vectors.edge.bytes_hex);
+        assert_eq!(hex_encode_fast(&xid.0), vectors.edge.bytes_hex);
         assert_eq!(
             xid.to_tensor256_words(),
             (
@@ -281,11 +278,11 @@ mod tests {
 
         let kid_head = Snid::from_hex(&vectors.capability.head_hex).unwrap();
         let actor = Snid::from_hex(&vectors.capability.actor_hex).unwrap();
-        let resource = hex::decode(vectors.capability.resource_hex).unwrap();
-        let capability = hex::decode(vectors.capability.capability_hex).unwrap();
-        let key = hex::decode(vectors.capability.key_hex).unwrap();
+        let resource = hex_decode_vec(&vectors.capability.resource_hex).unwrap();
+        let capability = hex_decode_vec(&vectors.capability.capability_hex).unwrap();
+        let key = hex_decode_vec(&vectors.capability.key_hex).unwrap();
         let kid = Kid::from_parts(kid_head, actor, &resource, &capability, &key).unwrap();
-        assert_eq!(hex::encode(kid.0), vectors.capability.bytes_hex);
+        assert_eq!(hex_encode_fast(&kid.0), vectors.capability.bytes_hex);
         assert!(kid.verify(actor, &resource, &capability, &key));
         assert_eq!(
             kid.to_tensor256_words(),
@@ -297,19 +294,15 @@ mod tests {
             )
         );
 
-        let eid_bytes: [u8; 8] = hex::decode(vectors.ephemeral.bytes_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let mut eid_bytes = [0u8; 8];
+        hex_decode_to(&vectors.ephemeral.bytes_hex, &mut eid_bytes).unwrap();
         let eid = Eid(u64::from_be_bytes(eid_bytes));
         assert_eq!(eid.timestamp_millis(), vectors.ephemeral.timestamp_millis);
         assert_eq!(eid.counter(), vectors.ephemeral.counter);
 
         let topology = Snid::from_hex(&vectors.bid.topology_hex).unwrap();
-        let content: [u8; 32] = hex::decode(vectors.bid.content_hex)
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let mut content = [0u8; 32];
+        hex_decode_to(&vectors.bid.content_hex, &mut content).unwrap();
         let bid = Bid::from_parts(topology, content);
         assert_eq!(bid.wire().unwrap(), vectors.bid.wire);
         assert_eq!(bid.r2_key(), vectors.bid.r2_key);

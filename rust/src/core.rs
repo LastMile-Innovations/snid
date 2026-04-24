@@ -18,7 +18,12 @@ pub struct Snid(pub [u8; 16]);
 
 impl fmt::Debug for Snid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Snid({})", hex::encode(self.0))
+        let mut out = [0u8; 32];
+        write!(
+            f,
+            "Snid({})",
+            crate::helpers::hex_encode_to(&self.0, &mut out)
+        )
     }
 }
 
@@ -214,12 +219,8 @@ impl Snid {
     }
 
     pub fn from_hex(hex_value: &str) -> Result<Self, Error> {
-        let bytes = hex::decode(hex_value)?;
-        if bytes.len() != 16 {
-            return Err(Error::InvalidLength);
-        }
         let mut out = [0u8; 16];
-        out.copy_from_slice(&bytes);
+        crate::helpers::hex_decode_to(hex_value, &mut out)?;
         Ok(Self(out))
     }
 
@@ -358,19 +359,27 @@ impl Snid {
     }
 
     pub fn parse_wire(value: &str) -> Result<(Self, String), Error> {
-        let (atom, payload, delim) = split_wire(value)?;
-        if delim == '_' && value.contains('_') {
-            // compatibility only; still accepted
-        }
+        let (atom, payload, _delim) = split_wire(value)?;
         let atom = Self::canonical_atom(atom).ok_or(Error::InvalidAtom)?;
         let bytes = decode_payload(payload)?;
         Ok((Self(bytes), atom.to_string()))
     }
 
+    /// Parses a wire string and returns the ID with a static canonical atom.
+    ///
+    /// This avoids the `String` allocation in `parse_wire` for callers that do
+    /// not need to own the atom.
+    pub fn parse_wire_canonical(value: &str) -> Result<(Self, &'static str), Error> {
+        let (atom, payload, _delim) = split_wire(value)?;
+        let atom = Self::canonical_atom(atom).ok_or(Error::InvalidAtom)?;
+        let bytes = decode_payload(payload)?;
+        Ok((Self(bytes), atom))
+    }
+
     /// Parses a wire string and returns the ID.
     /// This is the universal paradigm for parsing wire strings.
     pub fn parse(value: &str) -> Result<Self, Error> {
-        let (id, _) = Self::parse_wire(value)?;
+        let (id, _) = Self::parse_wire_canonical(value)?;
         Ok(id)
     }
 
@@ -653,7 +662,7 @@ mod tests {
     fn test_from_hex_valid() {
         let hex = "0123456789abcdef0123456789abcdef";
         let id = Snid::from_hex(hex).unwrap();
-        assert_eq!(hex::encode(id.0), hex);
+        assert_eq!(crate::helpers::hex_encode_fast(&id.0), hex);
     }
 
     #[test]
@@ -719,6 +728,15 @@ mod tests {
         let id = Snid::from_bytes([1u8; 16]);
         let wire = id.to_wire("MAT").unwrap();
         let (parsed, atom) = Snid::parse_wire(&wire).unwrap();
+        assert_eq!(parsed, id);
+        assert_eq!(atom, "MAT");
+    }
+
+    #[test]
+    fn test_parse_wire_canonical_valid() {
+        let id = Snid::from_bytes([1u8; 16]);
+        let wire = id.to_wire("OBJ").unwrap();
+        let (parsed, atom) = Snid::parse_wire_canonical(&wire).unwrap();
         assert_eq!(parsed, id);
         assert_eq!(atom, "MAT");
     }

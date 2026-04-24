@@ -1,8 +1,12 @@
 // Extended Family Benchmarks for SNID
 // Benchmarks for NID, LID, BID, EID operations
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use snid::{Bid, Eid, GrantId, Kid, Lid, Nid, Snid, TraceId};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use snid::{Bid, Eid, Nid, Snid, TraceId};
+#[cfg(feature = "crypto")]
+use snid::{GrantId, Kid, Lid};
+use std::hint::black_box;
+#[cfg(feature = "crypto")]
 use std::time::Duration;
 
 fn bench_nid_new(c: &mut Criterion) {
@@ -63,6 +67,7 @@ fn bench_nid_batch_1000(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_lid_new(c: &mut Criterion) {
     let base = Snid::new_fast();
     let prev = [0u8; 32];
@@ -76,6 +81,7 @@ fn bench_lid_new(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_lid_head(c: &mut Criterion) {
     let base = Snid::new_fast();
     let prev = [0u8; 32];
@@ -90,6 +96,7 @@ fn bench_lid_head(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_kid_verify(c: &mut Criterion) {
     let head = Snid::new_fast();
     let actor = Snid::new_fast();
@@ -112,6 +119,7 @@ fn bench_kid_verify(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_grant_new(c: &mut Criterion) {
     let key = b"grant-key-32-bytes-long-1234567890";
 
@@ -131,6 +139,7 @@ fn bench_grant_new(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_grant_verify(c: &mut Criterion) {
     let key = b"grant-key-32-bytes-long-1234567890";
     let grant = GrantId::new("MAT", Some(Duration::from_secs(60)), key).unwrap();
@@ -305,6 +314,30 @@ fn bench_traceparent_write(c: &mut Criterion) {
         });
 }
 
+#[cfg(not(feature = "crypto"))]
+criterion_group! {
+    name = extended_families;
+    config = Criterion::default();
+    targets =
+        bench_nid_new,
+        bench_nid_hamming,
+        bench_nid_batch_100,
+        bench_nid_batch_1000,
+        bench_bid_new,
+        bench_bid_wire,
+        bench_bid_write_wire,
+        bench_bid_append_wire,
+        bench_bid_parse_wire,
+        bench_eid_new,
+        bench_eid_to_bytes,
+        bench_eid_counter,
+        bench_eid_timestamp,
+        bench_eid_batch_100,
+        bench_eid_batch_1000,
+        bench_traceparent_write
+}
+
+#[cfg(feature = "crypto")]
 criterion_group! {
     name = extended_families;
     config = Criterion::default();

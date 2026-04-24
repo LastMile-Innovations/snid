@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-04-24
+
+### Added
+- **Rust**: Added `crypto` Cargo feature for crypto-backed APIs (`Lid`, `Kid`, `GrantId`) and documented the Rust package optimization strategy in `docs/performance/rust-package-optimization.md`.
+- **Rust**: Added `Snid::parse_wire_canonical()` for allocation-free parsing when callers can use a static canonical atom.
+- **Docs**: Added `docs/real-specs-and-data.md` with repo-backed protocol, conformance vector, package feature, and benchmark facts.
+
+### Changed
+- **Rust**: Made crypto-backed APIs optional by default; enable `features = ["crypto"]` to use `Lid`, `Kid`, or `GrantId`.
+- **Rust**: Made the `data` feature include `crypto` so conformance vectors continue to validate ledger and capability identifiers.
+- **Rust**: Excluded `benchmark_reports/**` from published crate packages.
+- **Rust**: Disabled default features for dev-only `criterion` and `proptest` dependencies to reduce benchmark/test dependency cost.
+
+### Performance
+- **Rust**: Removed the runtime `hex` dependency and replaced fixed SNID hex encode/decode paths with internal helpers.
+- **Rust**: Optimized `Snid::parse()` to avoid allocating an atom `String`; focused benchmarks measured about `27 ns` for `parse()` and `parse_wire_canonical()`.
+- **Rust**: Kept `Snid::parse_wire()` on its original direct path after benchmark validation to avoid regressing existing callers.
+- **Rust**: Reduced allocation in routing and AKID formatting paths by using stack buffers and direct append logic.
+
+### Fixed
+- **Rust**: Fixed `ScopeId::parse()` and `AliasId::parse()` to decode payload bytes directly instead of treating encoded payload text as hex.
+
 ## [0.2.1] - 2026-04-23
 
 ### Performance
@@ -67,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deterministic ingest constructors
 - Ghost bit helpers for masking flows
 
-[Unreleased]: https://github.com/LastMile-Innovations/snid/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/LastMile-Innovations/snid/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/LastMile-Innovations/snid/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/LastMile-Innovations/snid/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/LastMile-Innovations/snid/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LastMile-Innovations/snid/releases/tag/v0.1.0

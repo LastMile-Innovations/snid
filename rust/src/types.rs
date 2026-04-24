@@ -3,10 +3,14 @@
 use crate::core::Snid;
 use crate::encoding::{decode_base32_32, encode_base32_32_lower_to, encode_payload_to};
 use crate::error::Error;
+#[cfg(feature = "crypto")]
 use hmac::{Hmac, KeyInit, Mac};
+#[cfg(feature = "crypto")]
 use sha2::Sha256;
+#[cfg(feature = "crypto")]
 use subtle::ConstantTimeEq;
 
+#[cfg(feature = "crypto")]
 type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -80,8 +84,10 @@ impl Nid {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(transparent)]
+#[cfg(feature = "crypto")]
 pub struct Lid(pub [u8; 32]);
 
+#[cfg(feature = "crypto")]
 impl Lid {
     pub fn from_parts(
         head: Snid,
@@ -92,8 +98,7 @@ impl Lid {
         if key.is_empty() {
             return Err(Error::InvalidKey);
         }
-        let mut mac =
-            HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+        let mut mac = HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&prev);
         mac.update(payload);
@@ -177,8 +182,10 @@ impl Xid {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(transparent)]
+#[cfg(feature = "crypto")]
 pub struct Kid(pub [u8; 32]);
 
+#[cfg(feature = "crypto")]
 impl Kid {
     pub fn from_parts(
         head: Snid,
@@ -190,8 +197,7 @@ impl Kid {
         if key.is_empty() {
             return Err(Error::InvalidKey);
         }
-        let mut mac =
-            HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
+        let mut mac = HmacSha256::new_from_slice(key).map_err(|_| Error::InvalidKey)?;
         mac.update(&head.0);
         mac.update(&actor.0);
         mac.update(resource);
@@ -396,6 +402,7 @@ mod tests {
         assert_ne!(w3, 0);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_lid_from_parts() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -406,6 +413,7 @@ mod tests {
         assert_eq!(lid.head(), head);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_lid_from_parts_empty_key() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -416,6 +424,7 @@ mod tests {
         assert!(matches!(result, Err(Error::InvalidKey)));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_lid_head() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -426,6 +435,7 @@ mod tests {
         assert_eq!(lid.head(), head);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_lid_to_tensor256_words() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -496,6 +506,7 @@ mod tests {
         assert_ne!(w3, 0);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_from_parts() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -507,6 +518,7 @@ mod tests {
         assert_eq!(kid.head(), head);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_from_parts_empty_key() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -518,6 +530,7 @@ mod tests {
         assert!(matches!(result, Err(Error::InvalidKey)));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_verify() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -529,6 +542,7 @@ mod tests {
         assert!(kid.verify(actor, resource, capability, key));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_verify_wrong_capability() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -540,6 +554,7 @@ mod tests {
         assert!(!kid.verify(actor, resource, b"write", key));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_verify_wrong_key() {
         let head = Snid::from_bytes([1u8; 16]);
@@ -551,6 +566,7 @@ mod tests {
         assert!(!kid.verify(actor, resource, capability, b"different-key"));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_kid_to_tensor256_words() {
         let head = Snid::from_bytes([1u8; 16]);

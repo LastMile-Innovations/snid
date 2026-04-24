@@ -1,7 +1,7 @@
 //! Access Key ID (AKID) dual-part credentials.
 
 use crate::core::Snid;
-use crate::encoding::decode_base58_value;
+use crate::encoding::{decode_base58_value, encode_payload_to};
 use crate::error::Error;
 use crate::helpers::fnv1a;
 
@@ -65,34 +65,28 @@ impl Akid {
         if !wire.starts_with("KEY:") {
             return Err(Error::InvalidFormat);
         }
-        let parts: Vec<&str> = wire.splitn(2, '_').collect();
-        if parts.len() != 2 {
-            return Err(Error::InvalidFormat);
-        }
-        let (public, atom) = Snid::parse_wire(parts[0])?;
-        if atom != "KEY" {
-            return Err(Error::InvalidAtom);
-        }
-        Self::verify_secret_checksum(parts[1])?;
+        let (public_part, secret_part) = wire.split_once('_').ok_or(Error::InvalidFormat)?;
+        let payload = public_part
+            .strip_prefix("KEY:")
+            .ok_or(Error::InvalidFormat)?;
+        let public = Snid(crate::encoding::decode_payload(payload)?);
+        Self::verify_secret_checksum(secret_part)?;
         Ok((
             Self {
                 public,
-                secret: parts[1].to_string(),
+                secret: secret_part.to_string(),
             },
-            atom,
+            "KEY".to_string(),
         ))
     }
 
     pub fn format(public: Snid, secret: &str) -> String {
-        format!(
-            "KEY:{}_{}",
-            public
-                .to_wire("MAT")
-                .unwrap()
-                .split(':')
-                .nth(1)
-                .unwrap_or(""),
-            secret.trim()
-        )
+        let mut out = String::with_capacity(4 + 24 + 1 + secret.trim().len());
+        let mut payload = [0u8; 24];
+        out.push_str("KEY:");
+        out.push_str(encode_payload_to(public.0, &mut payload));
+        out.push('_');
+        out.push_str(secret.trim());
+        out
     }
 }

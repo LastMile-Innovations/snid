@@ -103,6 +103,39 @@ pub fn hex_encode_to<'a>(bytes: &[u8], out: &'a mut [u8]) -> &'a str {
     unsafe { std::str::from_utf8_unchecked(&out[..cursor]) }
 }
 
+pub fn hex_decode_to(input: &str, out: &mut [u8]) -> Result<(), crate::error::Error> {
+    let bytes = input.as_bytes();
+    if bytes.len() != out.len() * 2 {
+        return Err(crate::error::Error::InvalidLength);
+    }
+    for (idx, slot) in out.iter_mut().enumerate() {
+        let hi = hex_value(bytes[idx * 2])?;
+        let lo = hex_value(bytes[idx * 2 + 1])?;
+        *slot = (hi << 4) | lo;
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn hex_decode_vec(input: &str) -> Result<Vec<u8>, crate::error::Error> {
+    if input.len() % 2 != 0 {
+        return Err(crate::error::Error::InvalidLength);
+    }
+    let mut out = vec![0u8; input.len() / 2];
+    hex_decode_to(input, &mut out)?;
+    Ok(out)
+}
+
+#[inline(always)]
+fn hex_value(byte: u8) -> Result<u8, crate::error::Error> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(crate::error::Error::InvalidFormat),
+    }
+}
+
 pub fn splitmix64(seed: &mut u64) -> u64 {
     *seed = seed.wrapping_add(0x9e3779b97f4a7c15);
     let mut z = *seed;

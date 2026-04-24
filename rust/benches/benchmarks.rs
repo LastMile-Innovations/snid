@@ -1,5 +1,8 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use snid::{Bid, Eid, Lid, Nid, Snid, TurboStreamer};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+#[cfg(feature = "crypto")]
+use snid::Lid;
+use snid::{Bid, Eid, Nid, Snid, TurboStreamer};
+use std::hint::black_box;
 
 fn bench_snid_new_fast(c: &mut Criterion) {
     c.benchmark_group("snid_new_fast")
@@ -64,6 +67,26 @@ fn bench_snid_parse_wire(c: &mut Criterion) {
         .throughput(Throughput::Elements(1))
         .bench_function("snid_parse_wire", |b| {
             b.iter(|| black_box(Snid::parse_wire(black_box(&wire)).unwrap()));
+        });
+}
+
+fn bench_snid_parse_wire_canonical(c: &mut Criterion) {
+    let id = Snid::new_fast();
+    let wire = id.to_wire("MAT").unwrap();
+    c.benchmark_group("snid_parse_wire_canonical")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_parse_wire_canonical", |b| {
+            b.iter(|| black_box(Snid::parse_wire_canonical(black_box(&wire)).unwrap()));
+        });
+}
+
+fn bench_snid_parse(c: &mut Criterion) {
+    let id = Snid::new_fast();
+    let wire = id.to_wire("MAT").unwrap();
+    c.benchmark_group("snid_parse")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_parse", |b| {
+            b.iter(|| black_box(Snid::parse(black_box(&wire)).unwrap()));
         });
 }
 
@@ -179,6 +202,7 @@ fn bench_eid_from_parts(c: &mut Criterion) {
         });
 }
 
+#[cfg(feature = "crypto")]
 fn bench_lid_from_parts(c: &mut Criterion) {
     let head = Snid::new_fast();
     let prev = [0x11; 32];
@@ -225,6 +249,7 @@ fn bench_snid_write_base32(c: &mut Criterion) {
         });
 }
 
+#[cfg(not(feature = "crypto"))]
 criterion_group!(
     benches,
     bench_snid_new_fast,
@@ -233,6 +258,34 @@ criterion_group!(
     bench_snid_write_wire,
     bench_snid_append_wire,
     bench_snid_parse_wire,
+    bench_snid_parse_wire_canonical,
+    bench_snid_parse,
+    bench_snid_batch_1000,
+    bench_snid_fill_slice_1000,
+    bench_snid_fill_bytes_1000,
+    bench_snid_append_binary_batch_1000,
+    bench_turbo_streamer_next,
+    bench_turbo_streamer_refill_4096,
+    bench_snid_concurrent_4x1000,
+    bench_nid_hamming,
+    bench_bid_wire,
+    bench_eid_from_parts,
+    bench_snid_to_uuid_string,
+    bench_snid_write_uuid_string,
+    bench_snid_write_base32
+);
+
+#[cfg(feature = "crypto")]
+criterion_group!(
+    benches,
+    bench_snid_new_fast,
+    bench_snid_new_safe,
+    bench_snid_to_wire,
+    bench_snid_write_wire,
+    bench_snid_append_wire,
+    bench_snid_parse_wire,
+    bench_snid_parse_wire_canonical,
+    bench_snid_parse,
     bench_snid_batch_1000,
     bench_snid_fill_slice_1000,
     bench_snid_fill_bytes_1000,

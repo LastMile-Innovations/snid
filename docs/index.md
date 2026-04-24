@@ -11,6 +11,7 @@ Welcome to the SNID documentation. SNID is a modern polyglot sortable identifier
 ## Core Concepts
 
 - [Protocol Specification](SPEC.md) - Canonical protocol definition (normative)
+- [Real Specs and Data Snapshot](real-specs-and-data.md) - Current repo-backed protocol, vector, package, and benchmark facts
 - [Identifier Families](guides/identifier-families.md) - SNID, SGID, NID, LID, and more
 - [Wire Format](guides/wire-format.md) - Canonical wire string format
 - [Boundary Projections](guides/boundary-projections.md) - Tensor, LLM, and storage projections

@@ -62,5 +62,9 @@ pub use core::Snid;
 pub use encoding::{decode_fixed64_pair, encode_fixed64_pair};
 pub use error::Error;
 pub use generator::TurboStreamer;
-pub use routing::{AliasId, GrantId, ScopeId, ShardId};
-pub use types::{Bid, Eid, Kid, Lid, Nid, Wid, Xid};
+#[cfg(feature = "crypto")]
+pub use routing::GrantId;
+pub use routing::{AliasId, ScopeId, ShardId};
+pub use types::{Bid, Eid, Nid, Wid, Xid};
+#[cfg(feature = "crypto")]
+pub use types::{Kid, Lid};

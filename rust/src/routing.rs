@@ -1,17 +1,23 @@
 //! Routing types: GrantId, ScopeId, ShardId, AliasId.
 
 use crate::core::Snid;
-use crate::encoding::{decode_payload, encode_payload};
+use crate::encoding::{decode_payload, encode_payload_to};
 use crate::error::Error;
 use crate::helpers::fnv1a;
+#[cfg(feature = "crypto")]
 use hmac::{Hmac, KeyInit, Mac};
+#[cfg(feature = "crypto")]
 use sha2::Sha256;
+#[cfg(feature = "crypto")]
 use std::time::{SystemTime, UNIX_EPOCH};
+#[cfg(feature = "crypto")]
 use subtle::ConstantTimeEq;
 
+#[cfg(feature = "crypto")]
 type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Clone, Debug)]
+#[cfg(feature = "crypto")]
 pub struct GrantId {
     pub id: Snid,
     pub atom: String,
@@ -19,6 +25,7 @@ pub struct GrantId {
     pub expires_at: Option<SystemTime>,
 }
 
+#[cfg(feature = "crypto")]
 impl GrantId {
     pub fn new(atom: &str, ttl: Option<std::time::Duration>, secret: &[u8]) -> Result<Self, Error> {
         if secret.is_empty() {
@@ -58,8 +65,9 @@ impl GrantId {
             Snid::canonical_atom(&self.atom).unwrap_or(&self.atom)
         };
 
-        let mut buf = String::new();
-        buf.push_str(&self.id.to_wire(use_atom).unwrap());
+        let mut buf = String::with_capacity(64);
+        let mut wire = [0u8; 28];
+        buf.push_str(self.id.write_wire(use_atom, &mut wire).unwrap());
         if let Some(exp) = self.expires_at {
             if let Ok(dur) = exp.duration_since(UNIX_EPOCH) {
                 buf.push('@');
@@ -67,7 +75,8 @@ impl GrantId {
             }
         }
         buf.push('.');
-        buf.push_str(&encode_payload(self.signature));
+        let mut sig = [0u8; 24];
+        buf.push_str(encode_payload_to(self.signature, &mut sig));
         buf
     }
 
@@ -107,14 +116,14 @@ impl GrantId {
     }
 }
 
+#[cfg(feature = "crypto")]
 fn sign_grant(
     id: Snid,
     atom: &str,
     expires_at: Option<SystemTime>,
     secret: &[u8],
 ) -> Result<[u8; 16], Error> {
-    let mut mac =
-        HmacSha256::new_from_slice(secret).map_err(|_| Error::InvalidKey)?;
+    let mut mac = HmacSha256::new_from_slice(secret).map_err(|_| Error::InvalidKey)?;
     mac.update(&id.0);
     mac.update(atom.as_bytes());
     match expires_at {
@@ -170,7 +179,14 @@ impl ScopeId {
         if self.scope.is_empty() {
             return self.id.to_wire(atom).unwrap();
         }
-        format!("{}:{}.{}", atom, self.scope, encode_payload(self.id.0))
+        let mut out = String::with_capacity(atom.len() + self.scope.len() + 1 + 1 + 24);
+        out.push_str(atom);
+        out.push(':');
+        out.push_str(&self.scope);
+        out.push('.');
+        let mut payload = [0u8; 24];
+        out.push_str(encode_payload_to(self.id.0, &mut payload));
+        out
     }
 
     pub fn parse(s: &str) -> Result<(Self, String), Error> {
@@ -191,7 +207,7 @@ impl ScopeId {
         let atom = &s[..delim_idx];
         let scope = &s[delim_idx + 1..dot_idx];
 
-        let id = Snid::from_hex(&encode_payload(decode_payload(&s[dot_idx + 1..])?))?;
+        let id = Snid(decode_payload(&s[dot_idx + 1..])?);
 
         Ok((
             Self {
@@ -226,7 +242,14 @@ impl ShardId {
     }
 
     pub fn to_string(&self, atom: &str) -> String {
-        format!("{}:{}#{}", atom, encode_payload(self.id.0), self.shard_key)
+        let mut out = String::with_capacity(atom.len() + 1 + 24 + 1 + 5);
+        out.push_str(atom);
+        out.push(':');
+        let mut payload = [0u8; 24];
+        out.push_str(encode_payload_to(self.id.0, &mut payload));
+        out.push('#');
+        out.push_str(&self.shard_key.to_string());
+        out
     }
 
     pub fn parse(s: &str) -> Result<(Self, String), Error> {
@@ -252,7 +275,14 @@ impl AliasId {
     }
 
     pub fn to_string(&self, atom: &str) -> String {
-        format!("{}:{}/{}", atom, self.alias, encode_payload(self.id.0))
+        let mut out = String::with_capacity(atom.len() + self.alias.len() + 1 + 1 + 24);
+        out.push_str(atom);
+        out.push(':');
+        out.push_str(&self.alias);
+        out.push('/');
+        let mut payload = [0u8; 24];
+        out.push_str(encode_payload_to(self.id.0, &mut payload));
+        out
     }
 
     pub fn parse(s: &str) -> Result<(Self, String), Error> {
@@ -272,7 +302,7 @@ impl AliasId {
 
         let atom = &s[..colon_idx];
         let alias = &s[colon_idx + 1..slash_idx];
-        let id = Snid::from_hex(&encode_payload(decode_payload(&s[slash_idx + 1..])?))?;
+        let id = Snid(decode_payload(&s[slash_idx + 1..])?);
 
         Ok((
             Self {
@@ -284,11 +314,12 @@ impl AliasId {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "crypto"))]
 mod tests {
     use super::*;
     use std::time::Duration;
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_grant_id_sign_verify_parse() {
         let key = b"test-key";
@@ -302,6 +333,7 @@ mod tests {
         assert_eq!(parsed.signature, grant.signature);
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_grant_id_rejects_wrong_key() {
         let grant = GrantId::new("MAT", Some(Duration::from_secs(60)), b"right").unwrap();
@@ -312,6 +344,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_grant_id_rejects_tampered_atom() {
         let key = b"test-key";
@@ -323,6 +356,7 @@ mod tests {
         ));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_grant_id_expired() {
         let key = b"test-key";
@@ -338,6 +372,7 @@ mod tests {
         assert!(!grant.verify(key));
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_grant_id_empty_key_rejected() {
         assert!(matches!(
