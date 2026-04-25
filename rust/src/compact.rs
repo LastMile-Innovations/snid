@@ -88,6 +88,7 @@ impl TraceId {
         out[35] = b'-';
         hex_encode_to(&span_id, &mut out[36..52]);
         out[52..].copy_from_slice(b"-01");
+        // SAFETY: `write_traceparent` writes only ASCII hex digits and hyphens.
         unsafe { std::str::from_utf8_unchecked(out) }
     }
 }

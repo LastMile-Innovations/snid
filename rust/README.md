@@ -13,10 +13,10 @@ cargo add snid
 ## Quick Start
 
 ```rust
-use snid::SNID;
+use snid::Snid;
 
-let id = SNID::new();
-let wire = id.to_wire("MAT");
+let id = Snid::new();
+let wire = id.to_wire("MAT").unwrap();
 let uuid = id.to_uuid_string();
 ```
 

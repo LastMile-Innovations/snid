@@ -1,8 +1,9 @@
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 #[cfg(feature = "crypto")]
 use snid::Lid;
 use snid::{Bid, Eid, Nid, Snid, TurboStreamer};
 use std::hint::black_box;
+use std::time::Instant;
 
 fn bench_snid_new_fast(c: &mut Criterion) {
     c.benchmark_group("snid_new_fast")
@@ -17,6 +18,22 @@ fn bench_snid_new_safe(c: &mut Criterion) {
         .throughput(Throughput::Elements(1))
         .bench_function("snid_new_safe", |b| {
             b.iter(|| black_box(Snid::new_safe()));
+        });
+}
+
+fn bench_snid_try_new(c: &mut Criterion) {
+    c.benchmark_group("snid_try_new")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_try_new", |b| {
+            b.iter(|| black_box(Snid::try_new().unwrap()));
+        });
+}
+
+fn bench_snid_new_raw(c: &mut Criterion) {
+    c.benchmark_group("snid_new_raw")
+        .throughput(Throughput::Elements(1))
+        .bench_function("snid_new_raw", |b| {
+            b.iter(|| black_box(Snid::new_raw()));
         });
 }
 
@@ -98,6 +115,14 @@ fn bench_snid_batch_1000(c: &mut Criterion) {
         });
 }
 
+fn bench_snid_generate_batch_1000(c: &mut Criterion) {
+    c.benchmark_group("snid_generate_batch_1000")
+        .throughput(Throughput::Elements(1000))
+        .bench_function("snid_generate_batch_1000", |b| {
+            b.iter(|| black_box(Snid::generate_batch::<1000>()));
+        });
+}
+
 fn bench_snid_fill_slice_1000(c: &mut Criterion) {
     let mut ids = vec![Snid::from_bytes([0u8; 16]); 1000];
     c.benchmark_group("snid_fill_slice_1000")
@@ -157,19 +182,18 @@ fn bench_snid_concurrent_4x1000(c: &mut Criterion) {
     c.benchmark_group("snid_concurrent_4x1000")
         .throughput(Throughput::Elements(4000))
         .bench_function("snid_concurrent_4x1000", |b| {
-            b.iter(|| {
-                let handles: Vec<_> = (0..4)
-                    .map(|_| {
-                        std::thread::spawn(|| {
-                            for _ in 0..1000 {
+            b.iter_custom(|iters| {
+                let start = Instant::now();
+                std::thread::scope(|scope| {
+                    for _ in 0..4 {
+                        scope.spawn(move || {
+                            for _ in 0..iters.saturating_mul(1000) {
                                 black_box(Snid::new_fast());
                             }
-                        })
-                    })
-                    .collect();
-                for handle in handles {
-                    handle.join().unwrap();
-                }
+                        });
+                    }
+                });
+                start.elapsed()
             });
         });
 }
@@ -254,6 +278,8 @@ criterion_group!(
     benches,
     bench_snid_new_fast,
     bench_snid_new_safe,
+    bench_snid_try_new,
+    bench_snid_new_raw,
     bench_snid_to_wire,
     bench_snid_write_wire,
     bench_snid_append_wire,
@@ -261,6 +287,7 @@ criterion_group!(
     bench_snid_parse_wire_canonical,
     bench_snid_parse,
     bench_snid_batch_1000,
+    bench_snid_generate_batch_1000,
     bench_snid_fill_slice_1000,
     bench_snid_fill_bytes_1000,
     bench_snid_append_binary_batch_1000,
@@ -280,6 +307,8 @@ criterion_group!(
     benches,
     bench_snid_new_fast,
     bench_snid_new_safe,
+    bench_snid_try_new,
+    bench_snid_new_raw,
     bench_snid_to_wire,
     bench_snid_write_wire,
     bench_snid_append_wire,
@@ -287,6 +316,7 @@ criterion_group!(
     bench_snid_parse_wire_canonical,
     bench_snid_parse,
     bench_snid_batch_1000,
+    bench_snid_generate_batch_1000,
     bench_snid_fill_slice_1000,
     bench_snid_fill_bytes_1000,
     bench_snid_append_binary_batch_1000,

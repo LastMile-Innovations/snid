@@ -100,6 +100,7 @@ pub fn hex_encode_to<'a>(bytes: &[u8], out: &'a mut [u8]) -> &'a str {
         out[cursor + 1] = HEX_CHARS[(byte & 0x0F) as usize];
         cursor += 2;
     }
+    // SAFETY: every written byte comes from the lowercase ASCII hex table.
     unsafe { std::str::from_utf8_unchecked(&out[..cursor]) }
 }
 
@@ -118,7 +119,7 @@ pub fn hex_decode_to(input: &str, out: &mut [u8]) -> Result<(), crate::error::Er
 
 #[allow(dead_code)]
 pub fn hex_decode_vec(input: &str) -> Result<Vec<u8>, crate::error::Error> {
-    if input.len() % 2 != 0 {
+    if !input.len().is_multiple_of(2) {
         return Err(crate::error::Error::InvalidLength);
     }
     let mut out = vec![0u8; input.len() / 2];

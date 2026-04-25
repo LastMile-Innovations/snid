@@ -5,11 +5,11 @@ use crate::encoding::{
 };
 use crate::error::Error;
 use crate::generator::{
-    assume_init_snid_vec, new_uninit_snid_vec, try_batch_standalone, try_new_standalone,
-    with_generator,
+    assume_init_snid_vec, new_uninit_snid_vec, try_with_generator, with_generator,
 };
 use crate::helpers::expand_hash_material;
 use std::fmt;
+use std::mem::MaybeUninit;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -69,7 +69,13 @@ impl Snid {
     /// Attempts to generate a new SNID without panicking on OS RNG failure.
     #[inline(always)]
     pub fn try_new() -> Result<Self, Error> {
-        try_new_standalone()
+        try_with_generator(|state| state.next())
+    }
+
+    /// Generates a new SNID and returns its raw big-endian `u128` value.
+    #[inline(always)]
+    pub fn new_raw() -> u128 {
+        u128::from_be_bytes(Self::new().0)
     }
 
     /// Generates a new SNID with lock-free per-P state.
@@ -137,7 +143,11 @@ impl Snid {
 
     /// Attempts to generate a batch of IDs without panicking on OS RNG failure.
     pub fn try_batch(count: usize) -> Result<Vec<Self>, Error> {
-        try_batch_standalone(count)
+        let mut ids = new_uninit_snid_vec(count);
+        try_with_generator(|state| {
+            state.fill_uninit_slice(&mut ids);
+        })?;
+        Ok(assume_init_snid_vec(ids))
     }
 
     /// Fills an existing ID slice in place.
@@ -146,6 +156,24 @@ impl Snid {
     /// buffers, such as network send paths, database ingest loops, and arenas.
     pub fn fill_slice(out: &mut [Self]) {
         with_generator(|state| state.fill_slice(out));
+    }
+
+    /// Fills an existing ID slice in place.
+    #[inline(always)]
+    pub fn fill_batch(out: &mut [Self]) {
+        Self::fill_slice(out);
+    }
+
+    /// Generates a fixed-size batch without allocating on the heap.
+    pub fn generate_batch<const N: usize>() -> [Self; N] {
+        let mut out = MaybeUninit::<[Self; N]>::uninit();
+        // SAFETY: `[MaybeUninit<Self>; N]` has the same layout as
+        // `MaybeUninit<[Self; N]>`, and every element is initialized by
+        // `fill_uninit_slice` before `assume_init` below.
+        let slice = unsafe { &mut *out.as_mut_ptr().cast::<[MaybeUninit<Self>; N]>() };
+        with_generator(|state| state.fill_uninit_slice(slice));
+        // SAFETY: every element in the array was initialized immediately above.
+        unsafe { out.assume_init() }
     }
 
     /// Fills a byte buffer with raw SNID bytes and returns the number of IDs written.
@@ -168,6 +196,8 @@ impl Snid {
             state.fill_uninit_bytes(spare)
         });
         debug_assert_eq!(written, count);
+        // SAFETY: `reserve(bytes)` made room for `bytes`, and
+        // `fill_uninit_bytes` initialized exactly `written * 16` spare bytes.
         unsafe {
             out.set_len(start + written * 16);
         }
@@ -193,6 +223,7 @@ impl Snid {
         let mut out = [0u8; 36];
         self.write_uuid_string(&mut out);
         // The encoder only writes lowercase hex digits and hyphens.
+        // SAFETY: `encode_uuid_string` writes only ASCII hex digits and hyphens.
         unsafe { String::from_utf8_unchecked(out.to_vec()) }
     }
 
@@ -271,6 +302,8 @@ impl Snid {
         out[..3].copy_from_slice(atom.as_bytes());
         out[3] = b':';
         out[4..4 + payload.len()].copy_from_slice(payload.as_bytes());
+        // SAFETY: canonical atoms and Base58 payloads are ASCII, with `:`
+        // inserted as a valid UTF-8 byte.
         unsafe { Ok(std::str::from_utf8_unchecked(&out[..4 + payload.len()])) }
     }
 
@@ -329,33 +362,19 @@ impl Snid {
 
     /// Attempts to generate a public-safe ID without panicking on OS RNG failure.
     pub fn try_new_safe() -> Result<Self, Error> {
-        let mut out = [0u8; 16];
-
         // Get current time in milliseconds and truncate to second (time-blurring)
         use std::time::{SystemTime, UNIX_EPOCH};
         let ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("clock")
-            .as_millis() as u64;
+            .map(|duration| duration.as_millis() as u64)
+            .unwrap_or(0);
         let ms_sec = ms & !0x3FF; // Clear lower 10 bits to get second granularity
 
         // Generate 74 bits of pure CSPRNG entropy
         let mut entropy = [0u8; 10]; // 80 bits, we'll use 74
         getrandom::fill(&mut entropy)?;
 
-        // Assemble the ID with time-blurred timestamp and CSPRNG entropy
-        // Layout: [timestamp (48 bits)][version (4 bits)][entropy (74 bits)][variant (2 bits)]
-        let hi = (ms_sec << 16) | 0x7000; // timestamp + version
-
-        // Set variant bits (bits 6-7 of byte 8 should be 0b10 for RFC 4122)
-        let mut entropy64 = u64::from_be_bytes(entropy[..8].try_into().unwrap());
-        entropy64 = (entropy64 & 0x3FFF_FFFF_FFFF_FFFF) | 0x8000_0000_0000_0000; // Clear top 2 bits, set variant to 0b10
-        let lo = entropy64;
-
-        out[..8].copy_from_slice(&hi.to_be_bytes());
-        out[8..].copy_from_slice(&lo.to_be_bytes());
-
-        Ok(Self(out))
+        Ok(Self(make_safe_uuidv7_bytes(ms_sec, entropy)))
     }
 
     pub fn parse_wire(value: &str) -> Result<(Self, String), Error> {
@@ -570,6 +589,23 @@ fn validate_uuidv7_bytes(bytes: &[u8; 16]) -> Result<(), Error> {
     Ok(())
 }
 
+#[inline(always)]
+fn make_safe_uuidv7_bytes(ms: u64, entropy: [u8; 10]) -> [u8; 16] {
+    // Layout: [timestamp (48 bits)][version (4 bits)][rand_a (12 bits)]
+    // [variant (2 bits)][rand_b (62 bits)].
+    let rand_a = u16::from_be_bytes([entropy[0], entropy[1]]) & 0x0FFF;
+    let rand_b = u64::from_be_bytes([
+        entropy[2], entropy[3], entropy[4], entropy[5], entropy[6], entropy[7], entropy[8],
+        entropy[9],
+    ]) & 0x3FFF_FFFF_FFFF_FFFF;
+    let hi = (ms << 16) | 0x7000 | rand_a as u64;
+    let lo = 0x8000_0000_0000_0000 | rand_b;
+    let mut out = [0u8; 16];
+    out[..8].copy_from_slice(&hi.to_be_bytes());
+    out[8..].copy_from_slice(&lo.to_be_bytes());
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -584,6 +620,23 @@ mod tests {
     fn test_try_new() {
         let id = Snid::try_new().unwrap();
         assert_ne!(id.0, [0u8; 16]);
+    }
+
+    #[test]
+    fn test_try_new_cached_monotonicity() {
+        let id1 = Snid::try_new().unwrap();
+        let id2 = Snid::try_new().unwrap();
+        assert_ne!(id1, id2);
+        assert!(id2.timestamp_millis() >= id1.timestamp_millis());
+    }
+
+    #[test]
+    fn test_new_raw_matches_new_bytes() {
+        let raw = Snid::new_raw();
+        let id = Snid::from_bytes(raw.to_be_bytes());
+        assert_eq!(id.to_bytes(), raw.to_be_bytes());
+        assert_eq!((id.0[6] >> 4) & 0x0F, 7);
+        assert_eq!((id.0[8] >> 6) & 0b11, 0b10);
     }
 
     #[test]
@@ -809,6 +862,22 @@ mod tests {
     }
 
     #[test]
+    fn test_new_safe_uses_rand_a_and_rand_b_bits() {
+        let bytes = make_safe_uuidv7_bytes(
+            1_700_000_000_000,
+            [0xAB, 0xCD, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88],
+        );
+        let hi = u64::from_be_bytes(bytes[..8].try_into().unwrap());
+        let lo = u64::from_be_bytes(bytes[8..].try_into().unwrap());
+
+        assert_eq!(hi >> 16, 1_700_000_000_000);
+        assert_eq!((hi >> 12) & 0x0F, 0x7);
+        assert_eq!(hi & 0x0FFF, 0x0BCD);
+        assert_eq!(lo >> 62, 0b10);
+        assert_eq!(lo & 0x3FFF_FFFF_FFFF_FFFF, 0x3FEE_DDCC_BBAA_9988);
+    }
+
+    #[test]
     fn test_new_safe_time_blurring() {
         let id1 = Snid::new_safe();
         std::thread::sleep(std::time::Duration::from_millis(1100));
@@ -935,6 +1004,23 @@ mod tests {
     fn test_fill_slice_unique() {
         let mut ids = [Snid::from_bytes([0u8; 16]); 64];
         Snid::fill_slice(&mut ids);
+        assert!(ids.iter().all(|id| id.0 != [0u8; 16]));
+        let set: std::collections::HashSet<_> = ids.iter().copied().collect();
+        assert_eq!(set.len(), ids.len());
+    }
+
+    #[test]
+    fn test_fill_batch_unique() {
+        let mut ids = [Snid::from_bytes([0u8; 16]); 64];
+        Snid::fill_batch(&mut ids);
+        assert!(ids.iter().all(|id| id.0 != [0u8; 16]));
+        let set: std::collections::HashSet<_> = ids.iter().copied().collect();
+        assert_eq!(set.len(), ids.len());
+    }
+
+    #[test]
+    fn test_generate_batch_const_unique() {
+        let ids = Snid::generate_batch::<64>();
         assert!(ids.iter().all(|id| id.0 != [0u8; 16]));
         let set: std::collections::HashSet<_> = ids.iter().copied().collect();
         assert_eq!(set.len(), ids.len());

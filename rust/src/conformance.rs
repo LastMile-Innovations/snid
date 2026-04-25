@@ -317,11 +317,22 @@ mod tests {
         let uuidv7 = Snid::from_hex(&vectors.uuidv7.bytes_hex).unwrap();
         let uuid_str = format!(
             "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-            uuidv7.0[0], uuidv7.0[1], uuidv7.0[2], uuidv7.0[3],
-            uuidv7.0[4], uuidv7.0[5],
-            uuidv7.0[6], uuidv7.0[7],
-            uuidv7.0[8], uuidv7.0[9],
-            uuidv7.0[10], uuidv7.0[11], uuidv7.0[12], uuidv7.0[13], uuidv7.0[14], uuidv7.0[15]
+            uuidv7.0[0],
+            uuidv7.0[1],
+            uuidv7.0[2],
+            uuidv7.0[3],
+            uuidv7.0[4],
+            uuidv7.0[5],
+            uuidv7.0[6],
+            uuidv7.0[7],
+            uuidv7.0[8],
+            uuidv7.0[9],
+            uuidv7.0[10],
+            uuidv7.0[11],
+            uuidv7.0[12],
+            uuidv7.0[13],
+            uuidv7.0[14],
+            uuidv7.0[15]
         );
         assert_eq!(uuid_str, vectors.uuidv7.uuid_string);
         assert_eq!(uuidv7.timestamp_millis(), vectors.uuidv7.timestamp_millis);

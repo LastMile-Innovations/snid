@@ -7,12 +7,13 @@ use getrandom::fill;
 use std::cell::UnsafeCell;
 use std::mem::MaybeUninit;
 use std::process;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 thread_local! {
     pub(crate) static GENERATOR: UnsafeCell<GeneratorState> = UnsafeCell::new(GeneratorState::init());
+    static TRY_GENERATOR: UnsafeCell<Option<GeneratorState>> = const { UnsafeCell::new(None) };
 }
 
 // Global coarse clock shared across all threads
@@ -22,10 +23,12 @@ static COARSE_CLOCK: LazyLock<AtomicU64> = LazyLock::new(|| AtomicU64::new(curre
 pub(crate) fn init_coarse_clock() {
     static INIT: std::sync::Once = std::sync::Once::new();
     INIT.call_once(|| {
-        std::thread::spawn(|| loop {
-            let now = current_time_ms();
-            COARSE_CLOCK.store(now, Ordering::Relaxed);
-            std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::spawn(|| {
+            loop {
+                let now = current_time_ms();
+                COARSE_CLOCK.store(now, Ordering::Relaxed);
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
         });
     });
 }
@@ -112,6 +115,9 @@ impl GeneratorState {
 
     #[inline(always)]
     pub(crate) fn fill_slice(&mut self, out: &mut [Snid]) {
+        // SAFETY: `Snid` is `#[repr(transparent)]` over `[u8; 16]`, and
+        // `MaybeUninit<Snid>` has the same layout as `Snid`. The slice length
+        // stays in `Snid` elements, so every slot is initialized exactly once.
         let out = unsafe { std::slice::from_raw_parts_mut(out.as_mut_ptr().cast(), out.len()) };
         self.fill_uninit_slice(out);
     }
@@ -119,6 +125,9 @@ impl GeneratorState {
     #[inline(always)]
     pub(crate) fn fill_bytes(&mut self, out: &mut [u8]) -> usize {
         let byte_len = out.len() / 16 * 16;
+        // SAFETY: `MaybeUninit<u8>` has the same layout/alignment as `u8`.
+        // `byte_len` is rounded down to complete 16-byte ID slots, and the
+        // returned count tells the caller how many complete IDs were written.
         let out = unsafe { std::slice::from_raw_parts_mut(out.as_mut_ptr().cast(), byte_len) };
         self.fill_uninit_bytes(out)
     }
@@ -209,6 +218,9 @@ impl GeneratorState {
 
         let machine = (self.machine_id as u64 & 0x00FF_FFFF) << 36;
         let mut ptr = out.as_mut_ptr().cast::<u8>();
+        // SAFETY: `count <= available`, and `out` has at least `count * 16`
+        // bytes because `count` is derived from `out.len() / 16`. `ptr` is
+        // advanced one complete ID at a time and never escapes this slice.
         unsafe {
             if use_current {
                 let result = xoshiro_next(&mut state);
@@ -295,6 +307,9 @@ impl GeneratorState {
 
         let machine = (self.machine_id as u64 & 0x00FF_FFFF) << 36;
         let mut ptr = out.as_mut_ptr();
+        // SAFETY: `out.len() <= available`, so every pointer write stays
+        // within the slice. Each `MaybeUninit<Snid>` slot is written exactly
+        // once before the caller converts the buffer to initialized IDs.
         unsafe {
             if use_current {
                 let result = xoshiro_next(&mut state);
@@ -319,22 +334,29 @@ impl GeneratorState {
 
 #[inline(always)]
 pub(crate) fn with_generator<T>(f: impl FnOnce(&mut GeneratorState) -> T) -> T {
+    // SAFETY: `GENERATOR` is thread-local, and this function does not re-enter
+    // itself while the mutable borrow is alive. The `UnsafeCell` exists only to
+    // avoid a `RefCell` borrow check on the ID-generation hot path.
     GENERATOR.with(|cell| unsafe {
         let state = &mut *cell.get();
         f(state)
     })
 }
 
-pub(crate) fn try_new_standalone() -> Result<Snid, Error> {
-    let mut state = GeneratorState::try_init()?;
-    Ok(state.next())
-}
-
-pub(crate) fn try_batch_standalone(count: usize) -> Result<Vec<Snid>, Error> {
-    let mut state = GeneratorState::try_init()?;
-    let mut ids = new_uninit_snid_vec(count);
-    state.fill_uninit_slice(&mut ids);
-    Ok(assume_init_snid_vec(ids))
+pub(crate) fn try_with_generator<T>(f: impl FnOnce(&mut GeneratorState) -> T) -> Result<T, Error> {
+    TRY_GENERATOR.with(|cell| {
+        // SAFETY: this closure runs on the owning thread-local slot. The
+        // `Option` is initialized at most once per thread before lending a
+        // unique mutable reference to the cached generator.
+        let slot = unsafe { &mut *cell.get() };
+        if slot.is_none() {
+            *slot = Some(GeneratorState::try_init()?);
+        }
+        match slot.as_mut() {
+            Some(state) => Ok(f(state)),
+            None => unreachable!("generator initialized above"),
+        }
+    })
 }
 
 pub(crate) fn new_uninit_snid_vec(count: usize) -> Vec<MaybeUninit<Snid>> {
@@ -348,6 +370,9 @@ pub(crate) fn assume_init_snid_vec(mut ids: Vec<MaybeUninit<Snid>>) -> Vec<Snid>
     let len = ids.len();
     let cap = ids.capacity();
     std::mem::forget(ids);
+    // SAFETY: callers only invoke this after filling every element in the
+    // `Vec<MaybeUninit<Snid>>`. `Snid` has the same layout as
+    // `MaybeUninit<Snid>`, and length/capacity are preserved.
     unsafe { Vec::from_raw_parts(ptr, len, cap) }
 }
 
@@ -455,6 +480,8 @@ fn make_snid(ms: u64, sequence: u16, machine: u64, random: u64) -> Snid {
 unsafe fn write_words_to_ptr(ptr: *mut u8, words: (u64, u64)) {
     let hi = words.0.to_be_bytes();
     let lo = words.1.to_be_bytes();
+    // SAFETY: the caller guarantees `ptr..ptr+16` is valid for writes.
+    // `hi` and `lo` are stack arrays that do not overlap with the output.
     unsafe {
         std::ptr::copy_nonoverlapping(hi.as_ptr(), ptr, 8);
         std::ptr::copy_nonoverlapping(lo.as_ptr(), ptr.add(8), 8);
@@ -464,8 +491,8 @@ unsafe fn write_words_to_ptr(ptr: *mut u8, words: (u64, u64)) {
 pub(crate) fn current_time_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("clock")
-        .as_millis() as u64
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -495,6 +522,31 @@ mod tests {
         let initial_seq = state.sequence;
         state.next();
         assert_eq!(state.sequence, initial_seq.wrapping_add(1));
+    }
+
+    #[test]
+    fn test_generator_sequence_overflow_advances_virtual_time() {
+        let mut state = GeneratorState::init();
+        state.last_ms = current_time_ms().saturating_add(1_000);
+        state.sequence = 0x3FFF;
+
+        let expected_ms = state.last_ms + 1;
+        let id = state.next();
+
+        assert_eq!(id.timestamp_millis(), expected_ms as i64);
+        assert!(state.sequence <= 0x3FFF);
+    }
+
+    #[test]
+    fn test_generator_clock_rollback_keeps_virtual_time() {
+        let mut state = GeneratorState::init();
+        state.last_ms = current_time_ms().saturating_add(1_000);
+        state.sequence = 10;
+
+        let id = state.next();
+
+        assert_eq!(id.timestamp_millis(), state.last_ms as i64);
+        assert_eq!(state.sequence, 11);
     }
 
     #[test]
@@ -535,6 +587,8 @@ mod tests {
 
     #[test]
     fn test_generator_thread_local() {
+        // SAFETY: this test accesses the current thread's generator directly,
+        // and no other mutable borrow of the same thread-local is alive.
         GENERATOR.with(|cell| unsafe {
             let state = &mut *cell.get();
             let id1 = state.next();

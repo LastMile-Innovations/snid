@@ -1,7 +1,7 @@
 // Extended Family Benchmarks for SNID
 // Benchmarks for NID, LID, BID, EID operations
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use snid::{Bid, Eid, Nid, Snid, TraceId};
 #[cfg(feature = "crypto")]
 use snid::{GrantId, Kid, Lid};

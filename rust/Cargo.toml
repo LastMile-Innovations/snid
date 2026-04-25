@@ -1,7 +1,8 @@
 [package]
 name = "snid"
 version = "0.2.2"
-edition = "2021"
+edition = "2024"
+resolver = "3"
 rust-version = "1.95"
 license = "MIT OR Apache-2.0"
 description = "Polyglot sortable identifier protocol with UUID v7-compatible ordering and extended identifier families"

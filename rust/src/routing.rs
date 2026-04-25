@@ -48,10 +48,10 @@ impl GrantId {
         if secret.is_empty() {
             return false;
         }
-        if let Some(exp) = self.expires_at {
-            if SystemTime::now() > exp {
-                return false;
-            }
+        if let Some(exp) = self.expires_at
+            && SystemTime::now() > exp
+        {
+            return false;
         }
         sign_grant(self.id, &self.atom, self.expires_at, secret)
             .map(|expected| expected.ct_eq(&self.signature).into())
@@ -68,11 +68,11 @@ impl GrantId {
         let mut buf = String::with_capacity(64);
         let mut wire = [0u8; 28];
         buf.push_str(self.id.write_wire(use_atom, &mut wire).unwrap());
-        if let Some(exp) = self.expires_at {
-            if let Ok(dur) = exp.duration_since(UNIX_EPOCH) {
-                buf.push('@');
-                buf.push_str(&dur.as_secs().to_string());
-            }
+        if let Some(exp) = self.expires_at
+            && let Ok(dur) = exp.duration_since(UNIX_EPOCH)
+        {
+            buf.push('@');
+            buf.push_str(&dur.as_secs().to_string());
         }
         buf.push('.');
         let mut sig = [0u8; 24];

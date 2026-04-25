@@ -140,6 +140,7 @@ pub fn encode_payload_to(bytes: [u8; 16], buf: &mut [u8; 24]) -> &str {
             break;
         }
     }
+    // SAFETY: every written byte comes from the ASCII Base58 alphabet.
     unsafe { std::str::from_utf8_unchecked(&buf[idx + 1..]) }
 }
 
@@ -172,11 +173,7 @@ pub fn decode_payload(payload: &str) -> Result<[u8; 16], Error> {
 #[inline(always)]
 pub fn decode_base58_value(byte: u8) -> Option<u8> {
     let value = BASE58_DECODE[byte as usize];
-    if value < 0 {
-        None
-    } else {
-        Some(value as u8)
-    }
+    if value < 0 { None } else { Some(value as u8) }
 }
 
 pub fn encode_base32(bytes: [u8; 16]) -> String {
@@ -208,14 +205,22 @@ pub fn encode_base32_to(bytes: [u8; 16], buf: &mut [u8; 27]) -> &str {
         idx -= 1;
     }
 
+    // SAFETY: every written byte comes from the ASCII Crockford Base32 alphabet.
     unsafe { std::str::from_utf8_unchecked(&buf[idx + 1..]) }
 }
 
 #[inline(always)]
 fn div_rem_128_by_58(hi: u64, lo: u64) -> (u64, u64) {
     debug_assert!(hi < 58);
-    let dividend = ((hi as u128) << 64) | lo as u128;
-    ((dividend / 58) as u64, (dividend % 58) as u64)
+    let n = (hi << 32) | (lo >> 32);
+    let q_hi = n / 58;
+    let rem = n - q_hi * 58;
+
+    let n = (rem << 32) | (lo & 0xFFFF_FFFF);
+    let q_lo = n / 58;
+    let rem = n - q_lo * 58;
+
+    ((q_hi << 32) | q_lo, rem)
 }
 
 #[allow(dead_code)]
@@ -275,6 +280,7 @@ pub fn encode_base32_nopad_lower_to<'a>(bytes: &[u8], out: &'a mut [u8]) -> Resu
     }
 
     debug_assert_eq!(cursor, encoded_len);
+    // SAFETY: every written byte comes from the lowercase RFC 4648 Base32 alphabet.
     unsafe { Ok(std::str::from_utf8_unchecked(&out[..cursor])) }
 }
 
@@ -295,6 +301,7 @@ pub fn encode_base32_32_lower_to<'a>(bytes: &[u8; 32], out: &'a mut [u8; 52]) ->
     out[49] = RFC4648_BASE32_LOWER[(((b0 & 0x07) << 2) | (b1 >> 6)) as usize];
     out[50] = RFC4648_BASE32_LOWER[((b1 >> 1) & 0x1F) as usize];
     out[51] = RFC4648_BASE32_LOWER[((b1 & 0x01) << 4) as usize];
+    // SAFETY: every written byte comes from the lowercase RFC 4648 Base32 alphabet.
     unsafe { std::str::from_utf8_unchecked(out) }
 }
 
@@ -516,6 +523,29 @@ mod tests {
     }
 
     #[test]
+    fn test_div_rem_128_by_58_matches_u128_reference() {
+        let los = [
+            0,
+            1,
+            57,
+            58,
+            u32::MAX as u64,
+            1u64 << 32,
+            0x0123_4567_89AB_CDEF,
+            u64::MAX,
+        ];
+
+        for hi in 0..58 {
+            for lo in los {
+                let (quot, rem) = div_rem_128_by_58(hi, lo);
+                let value = ((hi as u128) << 64) | lo as u128;
+                assert_eq!(quot as u128, value / 58, "quot hi={hi} lo={lo}");
+                assert_eq!(rem as u128, value % 58, "rem hi={hi} lo={lo}");
+            }
+        }
+    }
+
+    #[test]
     fn test_decode_payload_invalid_length() {
         let result = decode_payload("1");
         assert!(matches!(result, Err(Error::InvalidPayload)));
@@ -532,6 +562,8 @@ mod tests {
         let bytes = [1u8; 16];
         let mut encoded = encode_payload(bytes);
         // Corrupt the checksum (last character)
+        // SAFETY: the encoded Base58 string is ASCII, and replacing one byte
+        // with another ASCII byte preserves UTF-8 validity.
         unsafe {
             let bytes = encoded.as_bytes_mut();
             let len = bytes.len();

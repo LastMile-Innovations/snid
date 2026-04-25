@@ -286,6 +286,8 @@ impl Bid {
             );
             content.len()
         };
+        // SAFETY: `out` is filled exclusively with ASCII bytes from fixed
+        // labels, Base58/Base32 encoders, and colon delimiters.
         unsafe {
             Ok(std::str::from_utf8_unchecked(
                 &out[..content_offset + content_len],
